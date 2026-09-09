@@ -13,7 +13,9 @@ public abstract class Enemigo {
         this.nivel = 1;
     }
 
+    // Este comentario solo sirve para hacer un commit
     public void recibirDanio(int danio){
+
         vida -= danio;
     }
 
