@@ -10,7 +10,7 @@ public class Batalla {
         this.party = party;
         this.enemigos = new Enemigo[4];
     }
-
+    // comentario para hacer un commit
     public void agregarEnemigo(Enemigo enemigo) {
 
         for (int i = 0; i < enemigos.length; i++) {
