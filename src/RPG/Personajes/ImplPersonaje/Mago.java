@@ -1,4 +1,7 @@
-package RPG;
+package RPG.Personajes.ImplPersonaje;
+
+import RPG.Personajes.Enemigo;
+import RPG.Personajes.Personaje;
 
 public class Mago extends Personaje {
 

@@ -1,5 +1,7 @@
 package RPG;
 
+import RPG.Personajes.Personaje;
+
 public class Party {
     private Personaje[] personajes;
 

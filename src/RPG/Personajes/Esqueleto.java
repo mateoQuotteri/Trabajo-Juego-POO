@@ -1,6 +1,6 @@
-package RPG;
+package RPG.Personajes;
 
-public class Esqueleto extends Enemigo{
+public class Esqueleto extends Enemigo {
 
     public Esqueleto(String nombre) {
         super(nombre, 80, 15);

@@ -1,4 +1,4 @@
-package RPG;
+package RPG.Personajes;
 
 public abstract class Personaje {
     private String nombre;

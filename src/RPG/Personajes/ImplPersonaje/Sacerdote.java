@@ -1,6 +1,9 @@
-package RPG;
+package RPG.Personajes.ImplPersonaje;
 
-public class Sacerdote extends Personaje{
+import RPG.Personajes.Enemigo;
+import RPG.Personajes.Personaje;
+
+public class Sacerdote extends Personaje {
 
     private int espiritu;
 

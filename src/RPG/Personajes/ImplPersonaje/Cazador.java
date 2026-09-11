@@ -1,6 +1,9 @@
-package RPG;
+package RPG.Personajes.ImplPersonaje;
 
-public class Cazador extends Personaje{
+import RPG.Personajes.Enemigo;
+import RPG.Personajes.Personaje;
+
+public class Cazador extends Personaje {
 
     private int destreza;
 

@@ -1,5 +1,7 @@
 package RPG;
 
+import RPG.Personajes.Enemigo;
+
 public class Batalla {
     private String lugar;
     private Party party;

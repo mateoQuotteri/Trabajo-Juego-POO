@@ -1,5 +1,11 @@
 package RPG;
 
+import RPG.Personajes.*;
+import RPG.Personajes.ImplPersonaje.Cazador;
+import RPG.Personajes.ImplPersonaje.Guerrero;
+import RPG.Personajes.ImplPersonaje.Mago;
+import RPG.Personajes.ImplPersonaje.Sacerdote;
+
 public class Main {
 
     public static void main(String[] args) {

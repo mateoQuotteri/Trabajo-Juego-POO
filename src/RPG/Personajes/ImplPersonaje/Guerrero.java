@@ -1,6 +1,9 @@
-package RPG;
+package RPG.Personajes.ImplPersonaje;
 
-public class Guerrero extends Personaje{
+import RPG.Personajes.Enemigo;
+import RPG.Personajes.Personaje;
+
+public class Guerrero extends Personaje {
 
     private int fuerza;
 
