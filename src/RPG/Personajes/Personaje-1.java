@@ -13,13 +13,8 @@ public abstract class Personaje {
     private int vida;
     private int mana;
     private int nivel;
-    private int ataque;    // daño base del ataque físico, antes del bono de Fuerza
-    private int defensa;   // resta daño recibido en recibirDanio()
-    private int velocidad; // determina el orden de turnos: ataca primero quien tiene más
-                            // velocidad (todavía no se usa para ordenar turnos porque no
-                            // existe el motor de combate por turnos; lo pide la consigna
-                            // como dato del personaje, y ya lo necesita el Grito de Guerra
-                            // del Guerrero, que lo buffea temporalmente)
+    private int ataque;   // daño base del ataque físico, antes del bono de Fuerza
+    private int defensa;  // resta daño recibido en recibirDanio()
 
     // ---------- Atributos ----------
     // Al crear el personaje, cada uno arranca en un valor aleatorio entre 1
@@ -60,14 +55,13 @@ public abstract class Personaje {
     // Constructor: recibe los datos "de clase" (los valores fijos que le
     // pasa cada subclase, como Guerrero o Mago) y arranca los 5 atributos
     // en un valor aleatorio. El nivel siempre arranca en 1.
-    public Personaje(String nombre, int vida, int mana, int ataque, int defensa, int velocidad){
+    public Personaje(String nombre, int vida, int mana, int ataque, int defensa){
         this.nombre = nombre;
         this.vida = vida;
         this.mana = mana;
         this.nivel = 1;
         this.ataque = ataque;
         this.defensa = defensa;
-        this.velocidad = velocidad;
 
         this.fuerza = valorAleatorioAtributo();
         this.destreza = valorAleatorioAtributo();
@@ -100,30 +94,15 @@ public abstract class Personaje {
         return nivel;
     }
 
-    public int getVelocidad(){
-        return velocidad;
-    }
-
     // ---------- Acciones de combate ----------
 
-    // Calcula el daño del ataque cuerpo a cuerpo básico (ataque base más el
-    // bono de Fuerza, todo multiplicado por el nivel). Queda como método
-    // aparte (en vez de estar solo adentro de atacar()) para que las
-    // habilidades de una subclase puedan reusar este mismo cálculo como
-    // punto de partida (ver Guerrero: Habilidad 1 y Habilidad 3, que pegan
-    // "el doble" y "el cuádruple" de este valor).
-    protected int calcularDanioAtaqueBasico(){
-        int bonoFuerza = bonoDe(fuerza, multiplicadorFuerza());
-        return (ataque + bonoFuerza) * nivel;
-    }
-
     // Ataque cuerpo a cuerpo básico, disponible para cualquier personaje.
-    // El daño es el que calcula calcularDanioAtaqueBasico() (ataque base +
-    // bono de Fuerza, según qué tan efectiva es para la clase concreta del
-    // personaje: multiplicadorFuerza() x1 Guerrero, x0.5 Cazador, x0.25
-    // Mago/Sacerdote).
+    // El daño es el ataque base más un bono de Fuerza. Ese bono depende de
+    // qué tan efectiva es la Fuerza para la clase concreta del personaje
+    // (multiplicadorFuerza(): x1 Guerrero, x0.5 Cazador, x0.25 Mago/Sacerdote).
     public void atacar(Enemigo objetivo){
-        int danio = calcularDanioAtaqueBasico();
+        int bonoFuerza = bonoDe(fuerza, multiplicadorFuerza());
+        int danio = (ataque + bonoFuerza) * nivel;
         objetivo.recibirDanio(danio);
     }
 
