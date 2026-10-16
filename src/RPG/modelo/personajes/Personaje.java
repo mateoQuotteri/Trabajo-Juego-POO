@@ -6,13 +6,10 @@ import RPG.modelo.habilidades.Habilidad;
 // Clase abstracta para los 4 personajes jugables (Guerrero, Mago, Arquero,
 // Curador). Extiende Combatiente (nombre, vida, defensa, velocidad) y agrega
 // lo propio de un personaje de la party: maná, ataque físico y mágico,
-// nivel y experiencia, y sus 2 habilidades.
+// nivel y experiencia, y sus 2 habilidades (objetos Habilidad que cada
+// subclase le pasa al constructor).
 //
-// CAMBIO 16/10: las habilidades ya no son métodos abstractos que cada
-// subclase reescribe (usarHabilidadBasica/usarHabilidadPoderosa), sino 2
-// objetos Habilidad que cada subclase le pasa al constructor. Así la lógica
-// común ("¿alcanza el maná? -> se descuenta -> se ejecuta") vive en un solo
-// lugar (usarHabilidad) y no copiada 8 veces.
+// Todo según el documento entregado (Fase A), que es la fuente de verdad.
 public abstract class Personaje extends Combatiente {
 
     // ---------- Reglas del documento ----------
@@ -35,16 +32,10 @@ public abstract class Personaje extends Combatiente {
     private Habilidad habilidadBasica;
     private Habilidad habilidadPoderosa;
 
-    // ---------- Estados temporales (se limpian al empezar cada batalla) ----------
+    // ---------- Estados (se limpian al empezar cada batalla) ----------
     private boolean defendiendo;
-    private int turnosInmortalRestantes;
     private boolean aturdido;
     private int turnosVenenoRestantes;
-    private int penalizacionVelocidad;
-    private int turnosVelocidadReducidaRestantes;
-    private int penalizacionDefensa;
-    private int turnosDefensaReducidaRestantes;
-    private int turnosImpedidoDeCurarseRestantes;
 
     public Personaje(String nombre, int vidaMaxima, int manaMaximo, int ataqueFisico, int ataqueMagico,
                      int defensa, int velocidad, Habilidad habilidadBasica, Habilidad habilidadPoderosa) {
@@ -77,10 +68,8 @@ public abstract class Personaje extends Combatiente {
         return manaActual >= habilidad.getCostoMana();
     }
 
-    // Usa una de SUS habilidades sobre un objetivo. El que llama (el
-    // controlador) ya validó maná y objetivo, pero se vuelve a chequear el
-    // maná acá por seguridad: el Personaje es el dueño de su maná (GRASP
-    // Experto) y no debería poder quedar negativo nunca.
+    // Usa una de sus habilidades. Valida y descuenta el maná en UN solo
+    // lugar (GRASP Experto: el Personaje es el dueño de su maná).
     public String usarHabilidad(Habilidad habilidad, Combatiente objetivo) {
         if (!tieneManaPara(habilidad)) {
             return getNombre() + " no tiene maná suficiente para " + habilidad.getNombre() + ".";
@@ -89,17 +78,14 @@ public abstract class Personaje extends Combatiente {
         return habilidad.ejecutar(this, objetivo);
     }
 
-    // Defender: por defecto ningún personaje puede. El Guerrero pisa
-    // puedeDefender() y devuelve true (polimorfismo, en vez de preguntar
-    // "instanceof Guerrero" en el controlador o en la pantalla).
+    // Defender: por defecto ningún personaje puede; el Guerrero pisa este
+    // método y devuelve true (polimorfismo en vez de "instanceof Guerrero").
     public boolean puedeDefender() {
         return false;
     }
 
-    // Reduce a la mitad TODO el daño que reciba hasta que vuelva a empezar
-    // su propio turno (documento: "reduce a la mitad el daño que recibe ese
-    // turno"). Antes se gastaba con el primer golpe, y si nadie lo golpeaba
-    // quedaba activo para siempre: corregido con iniciarTurno().
+    // Documento: "reduce a la mitad el daño que recibe ese turno". Dura
+    // hasta que vuelva a empezar su propio turno (ver iniciarTurno()).
     public String defender() {
         if (!puedeDefender()) {
             return getNombre() + " no puede defenderse.";
@@ -112,91 +98,47 @@ public abstract class Personaje extends Combatiente {
     // CICLO DEL TURNO (lo llama el controlador)
     // ======================================================================
 
-    // Al empezar su turno: se termina la guardia de Defender del turno anterior.
+    // Al empezar su turno se termina la guardia de Defender del turno anterior.
     public void iniciarTurno() {
         defendiendo = false;
     }
 
-    // Si el personaje NO usó una habilidad este turno, recupera +10 de maná.
+    // Documento: si atacó, se defendió o usó un ítem, recupera +10 de maná.
     public void crecerManaPorTurno() {
         manaActual = Math.min(manaMaximo, manaActual + MANA_POR_TURNO);
     }
 
-    // Al final de su turno (haya actuado o no): aplica veneno y descuenta
-    // un turno a todos los efectos con duración. Devuelve un mensaje si
-    // pasó algo visible (veneno), o "" si no.
+    // Al final de su turno (haya actuado o no): el veneno le saca el 5% de
+    // su vida máxima, durante 3 turnos. Devuelve el mensaje, o "" si nada.
     public String actualizarEfectosDeFinDeTurno() {
-        String mensaje = "";
-        if (turnosVenenoRestantes > 0) {
-            int danioVeneno = (int) Math.round(getVidaMaxima() * PORCENTAJE_VIDA_POR_VENENO);
-            int vidaAntes = getVidaActual();
-            recibirDanio(danioVeneno);
-            mensaje = getNombre() + " pierde " + (vidaAntes - getVidaActual()) + " de vida por el veneno.";
-            turnosVenenoRestantes--;
+        if (turnosVenenoRestantes == 0) {
+            return "";
         }
-        if (turnosInmortalRestantes > 0) {
-            turnosInmortalRestantes--;
-        }
-        if (turnosVelocidadReducidaRestantes > 0) {
-            turnosVelocidadReducidaRestantes--;
-            if (turnosVelocidadReducidaRestantes == 0) {
-                penalizacionVelocidad = 0;
-            }
-        }
-        if (turnosDefensaReducidaRestantes > 0) {
-            turnosDefensaReducidaRestantes--;
-            if (turnosDefensaReducidaRestantes == 0) {
-                penalizacionDefensa = 0;
-            }
-        }
-        if (turnosImpedidoDeCurarseRestantes > 0) {
-            turnosImpedidoDeCurarseRestantes--;
-        }
-        return mensaje;
+        int danioVeneno = (int) Math.round(getVidaMaxima() * PORCENTAJE_VIDA_POR_VENENO);
+        int vidaAntes = getVidaActual();
+        recibirDanio(danioVeneno);
+        turnosVenenoRestantes--;
+        return getNombre() + " pierde " + (vidaAntes - getVidaActual()) + " de vida por el veneno.";
     }
 
-    // Documento: "Al comenzar el combate, todos los personajes inician con
-    // 0 de maná". NUEVO: antes el maná solo arrancaba en 0 al crear el
-    // personaje; si la misma party pasaba de piso, arrastraba el maná y los
-    // efectos de la batalla anterior.
+    // Documento: "al comenzar el combate, todos inician con 0 de maná".
     public void prepararParaNuevaBatalla() {
         manaActual = 0;
         defendiendo = false;
-        turnosInmortalRestantes = 0;
         aturdido = false;
         turnosVenenoRestantes = 0;
-        penalizacionVelocidad = 0;
-        turnosVelocidadReducidaRestantes = 0;
-        penalizacionDefensa = 0;
-        turnosDefensaReducidaRestantes = 0;
-        turnosImpedidoDeCurarseRestantes = 0;
     }
-
-    // ======================================================================
-    // RECIBIR DAÑO / CURACIÓN (se pisan los de Combatiente)
-    // ======================================================================
 
     @Override
     public void recibirDanio(int danio) {
-        if (esInmortal()) {
-            return;
-        }
         int danioFinal = defendiendo ? danio / 2 : danio;
         super.recibirDanio(danioFinal);
     }
 
-    // Mientras dure el Toque de Muerte, cualquier curación se ignora (de
-    // habilidad o, más adelante, de poción: todas pasan por acá).
-    @Override
-    public void recibirCuracion(int cantidad) {
-        if (estaImpedidoDeCurarse()) {
-            return;
-        }
-        super.recibirCuracion(cantidad);
-    }
-
     // ======================================================================
-    // EFECTOS DE ESTADO (los aplican los enemigos o Revivir)
+    // ESTADOS DE ALTERACIÓN (documento, sección 1.4.4)
+    // PENDIENTE: Escudo (mitad de daño durante 2 turnos). El documento lo
+    // nombra pero no dice quién lo da: falta definirlo.
     // ======================================================================
 
     public void aturdir() {
@@ -208,7 +150,7 @@ public abstract class Personaje extends Combatiente {
     }
 
     // Al empezar el turno: si estaba aturdido, "gasta" el aturdimiento y
-    // devuelve true (pierde este turno). No se acumula.
+    // devuelve true (pierde exactamente 1 turno). No se acumula.
     public boolean consumirAturdimiento() {
         if (aturdido) {
             aturdido = false;
@@ -225,49 +167,8 @@ public abstract class Personaje extends Combatiente {
         return turnosVenenoRestantes > 0;
     }
 
-    public void volverseInmortal(int turnos) {
-        turnosInmortalRestantes = turnos;
-    }
-
-    public boolean esInmortal() {
-        return turnosInmortalRestantes > 0;
-    }
-
     public boolean estaDefendiendo() {
         return defendiendo;
-    }
-
-    // Escupitajo del Slime
-    public void reducirVelocidad(int cantidad, int turnos) {
-        penalizacionVelocidad = cantidad;
-        turnosVelocidadReducidaRestantes = turnos;
-    }
-
-    // Golpe Debilitante del Goblin
-    public void reducirDefensa(int cantidad, int turnos) {
-        penalizacionDefensa = cantidad;
-        turnosDefensaReducidaRestantes = turnos;
-    }
-
-    // Toque de Muerte del Esqueleto
-    public void aplicarImpedimentoDeCuracion(int turnos) {
-        turnosImpedidoDeCurarseRestantes = turnos;
-    }
-
-    public boolean estaImpedidoDeCurarse() {
-        return turnosImpedidoDeCurarseRestantes > 0;
-    }
-
-    // Se pisan para que la penalización se descuente en TODOS lados (orden
-    // de turnos, fórmulas de daño) sin tocar el valor base.
-    @Override
-    public int getVelocidad() {
-        return Math.max(0, super.getVelocidad() - penalizacionVelocidad);
-    }
-
-    @Override
-    public int getDefensa() {
-        return Math.max(0, super.getDefensa() - penalizacionDefensa);
     }
 
     // Texto corto con los estados activos, para mostrar en pantalla.
@@ -276,10 +177,6 @@ public abstract class Personaje extends Combatiente {
         if (aturdido) estados += " [Aturdido]";
         if (estaEnvenenado()) estados += " [Veneno " + turnosVenenoRestantes + "]";
         if (defendiendo) estados += " [Defendiendo]";
-        if (esInmortal()) estados += " [Inmortal " + turnosInmortalRestantes + "]";
-        if (turnosVelocidadReducidaRestantes > 0) estados += " [-Vel]";
-        if (turnosDefensaReducidaRestantes > 0) estados += " [-Def]";
-        if (estaImpedidoDeCurarse()) estados += " [Sin curación]";
         return estados;
     }
 
@@ -287,9 +184,8 @@ public abstract class Personaje extends Combatiente {
     // EXPERIENCIA Y NIVEL
     // ======================================================================
 
-    // NUEVO: conecta la experiencia con subirNivel(), que antes existía
-    // pero nadie llamaba. Experiencia necesaria = nivel actual x 100.
-    // Devuelve cuántos niveles subió (puede ser más de uno de golpe).
+    // Experiencia necesaria = nivel actual x 100. Devuelve cuántos niveles
+    // subió (puede ser más de uno de golpe).
     public int ganarExperiencia(int cantidad) {
         if (nivel >= NIVEL_MAXIMO) {
             return 0;
@@ -311,18 +207,16 @@ public abstract class Personaje extends Combatiente {
         return nivel * EXPERIENCIA_POR_NIVEL;
     }
 
-    // +3% compuesto a todas las estadísticas. Se usa super.getDefensa()/
-    // super.getVelocidad() para crecer sobre el valor BASE, aunque en ese
-    // momento tenga un debuff activo.
+    // +3% compuesto a todas las estadísticas (documento).
     private void subirNivel() {
         nivel++;
         setVidaMaxima(crecer(getVidaMaxima()));
-        setVidaActual(getVidaMaxima()); // al subir de nivel se cura del todo (a confirmar con el grupo)
+        setVidaActual(getVidaMaxima()); // al subir de nivel se cura del todo (el doc no lo dice: a confirmar)
         manaMaximo = crecer(manaMaximo);
         ataqueFisico = crecer(ataqueFisico);
         ataqueMagico = crecer(ataqueMagico);
-        setDefensa(crecer(super.getDefensa()));
-        setVelocidad(crecer(super.getVelocidad()));
+        setDefensa(crecer(getDefensa()));
+        setVelocidad(crecer(getVelocidad()));
     }
 
     private int crecer(int valor) {
@@ -346,8 +240,7 @@ public abstract class Personaje extends Combatiente {
         return habilidadPoderosa;
     }
 
-    // Nombre de la clase para mostrar ("Guerrero", "Mago"...). Cada
-    // subclase lo define; evita usar getClass().getSimpleName() en la Vista.
+    // Nombre de la clase para mostrar ("Guerrero", "Mago"...).
     public abstract String getNombreClase();
 
     public int getManaMaximo() {

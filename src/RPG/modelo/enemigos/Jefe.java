@@ -2,12 +2,9 @@ package RPG.modelo.enemigos;
 
 import RPG.modelo.personajes.Personaje;
 
-// Jefe del Piso 5: "Rey Slime". 50% ataca / 30% aturde / 20% envenena.
-// Stats rebalanceadas por el grupo el 26/09 (simulación de 1000 batallas:
-// la party pierde ~1 de cada 3). NO se le aplica el escalado por piso:
-// sus números ya están pensados para el piso 5.
-// OJO: el documento entregado todavía tiene los valores viejos (70/30/20/25).
-// PENDIENTE (pedido del grupo): 2 ataques especiales propios.
+// Jefe del Piso 5: "Rey Slime". Documento: 50% ataca / 30% aturde / 20% envenena.
+// Stats del documento: Vida 70, Ataque 30, Defensa 20, Velocidad 25.
+// No se escala por piso: la tabla ya lo define como "Jefe (Piso 5)".
 public class Jefe extends Enemigo {
 
     private static final String[] ACCIONES = {
@@ -16,9 +13,10 @@ public class Jefe extends Enemigo {
             "envenenar", "envenenar"                          // 20%
     };
 
-    // vida, ataque, defensa, velocidad, nivel, experiencia que otorga
+    // vida, ataque, defensa, velocidad, experiencia que otorga
     public Jefe() {
-        super("Rey Slime", 200, 55, 25, 30, 5, 250);
+        super("Rey Slime", 70, 30, 20, 25, 250);
+        setNivel(5);
     }
 
     @Override

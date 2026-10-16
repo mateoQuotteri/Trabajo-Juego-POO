@@ -1,99 +1,104 @@
 CHECKLIST TPO - RPG POR TURNOS (Paradigma Orientado a Objetos - UADE)
 =======================================================================
-Última actualización: 16/10/2026 (versión condensada).
+Última actualización: 16/10/2026.
 Entrega final (Fase B): primera semana de noviembre (06/11/2026).
 
-Esta versión reemplaza al checklist largo (narrativo, hasta el 26/09).
-Ese historial sigue en el repo de Git si hace falta consultarlo.
-El detalle de los cambios del 16/10 está en docs/CAMBIOS-16-10.docx.
+REGLA DEL GRUPO: ante cualquier duda entre el código y el documento
+entregado (entregables-1/TPO-Grupo_16-TN1.docx.pdf), MANDA EL DOCUMENTO.
+Si algo se quiere cambiar, primero se cambia el documento y después el
+código.
 
-Fuente de verdad del diseño: el documento entregado en la Fase A
-(entregables-1/TPO-Grupo_16-TN1.docx.pdf) + las decisiones posteriores
-del grupo anotadas abajo en "DIFERENCIAS CÓDIGO vs DOCUMENTO".
+El detalle de los cambios del 16/10 está en docs/CAMBIOS-16-10.docx.
+El checklist largo anterior (hasta el 26/09) sigue en el historial de Git.
+
+
+PANTALLAS (acordadas con el profe: las mínimas e indispensables)
+----------------------------------------------------------------
+1. Menú / Inicio: Iniciar partida, Cargar partida, Cerrar juego.
+2. Partidas guardadas: la abre "Cargar partida" (lista de guardadas).
+3. Batalla.
+4. Resumen de batalla: resultado + experiencia + estado de la party.
+   Desde acá: Siguiente piso / Inventario / Guardar / Volver al menú.
+5. Inventario.
+
+Flujo: Menú -> Batalla piso 1 -> Resumen -> Batalla piso 2 -> ... ->
+       piso 10 ganado (fin) o party derrotada (game over) -> Menú.
 
 
 ESTRUCTURA DEL CÓDIGO (MVC)
 ----------------------------
 src/RPG/
   Main.java                    -> abre la ventana de Swing
-  modelo/                      -> MODELO (reglas del juego, no dibuja nada)
-    Combatiente, Party, Batalla, GeneradorDeEnemigos
+  modelo/                      -> MODELO (reglas, no dibuja nada)
+    Combatiente, Party, Batalla, Partida, ResultadoDeBatalla,
+    GeneradorDeEnemigos
     personajes/  Personaje, Guerrero, Mago, Arquero, Curador
-    enemigos/    Enemigo, Slime, Goblin, Jefe, JefeFinal, Esqueleto
-    habilidades/ Habilidad, AtaqueConMultiplicador, DisparoCertero,
-                 Sanacion, Revivir
+    enemigos/    Enemigo, Slime, Goblin, Jefe, JefeFinal
+    habilidades/ Habilidad, AtaqueConMultiplicador, Curacion
   controlador/                 -> CONTROLADOR
-    ControladorDeBatalla
+    ControladorDeJuego (entre batallas), ControladorDeBatalla (turnos)
   vista/                       -> VISTA (Swing)
-    VentanaPrincipal, PantallaMenu, PantallaTorre, PantallaBatalla,
-    PantallaInventario
+    VentanaPrincipal, PantallaMenu, PantallaPartidasGuardadas,
+    PantallaBatalla, PantallaResumenBatalla, PantallaInventario
   consola/                     -> vista de PRUEBA por consola
-    JuegoConsola (usa el mismo ControladorDeBatalla que Swing)
+    JuegoConsola (usa los mismos controladores que Swing)
 
 
-YA HECHO
---------
-[x] 4 clases (Guerrero/Mago/Arquero/Curador) con stats de Nivel 1.
-[x] Habilidades como objetos (clase Habilidad + subclases). 16/10.
-[x] Ataque básico, habilidad básica, habilidad poderosa, Defender.
-[x] Maná: arranca en 0 en CADA batalla, +10 si no usó habilidad.
-[x] Habilidades bloqueadas si no alcanza el maná (no pierde el turno).
-[x] Orden de turnos por Velocidad, reordenado cada ronda, empate al azar
-    (ahora vive en Batalla).
-[x] UN enemigo por batalla (recomendación del profe). 16/10.
-[x] Party de 2 a 4 miembros validada. 16/10.
-[x] Enemigos: Slime, Goblin, Jefe (Rey Slime), Jefe Final (Guardián
-    Ancestral) + Esqueleto de prueba, con IA por lista ponderada.
-[x] Enemigo de cada piso generado al azar (GeneradorDeEnemigos) con
-    escalado +10% por piso (solo enemigos comunes). 16/10.
-[x] Efectos: Aturdimiento, Veneno, Inmortalidad (Revivir), -Velocidad
-    (Escupitajo), -Defensa (Golpe Debilitante), Sin curación (Toque de
-    Muerte).
-[x] Experiencia fija por enemigo, repartida a los vivos al ganar, sube
-    de nivel (nivel x 100) con +3% compuesto, tope nivel 20. 16/10.
-[x] ControladorDeBatalla: una sola lógica para Swing y para consola. 16/10.
-[x] Pantalla de Batalla conectada al controlador real: respeta orden por
-    Velocidad, el enemigo juega solo, muestra estados, elige aliado para
-    curar/revivir. 16/10.
-[x] Diagrama de clases del código actual (docs/diagrama-clases.mmd). 16/10.
+YA HECHO (todo según el documento)
+-----------------------------------
+[x] 4 clases con stats de Nivel 1 de la tabla.
+[x] Habilidades del documento: Tajo/Golpe Poderoso, Chispa/Bola de
+    Fuego, Disparo Certero/Lluvia de Flechas (x1.5 / x2.5),
+    Sanación (cura 20) / Sanación Mayor (cura 45). Defender (Guerrero).
+[x] Maná: 0 al empezar cada batalla, +10 si no usó habilidad, habilidad
+    bloqueada si no alcanza.
+[x] Orden por Velocidad, reordenado cada ronda, empate al azar.
+[x] Fórmula de daño: max(1, ataque - defensa) x multiplicador.
+[x] Un enemigo por batalla. Party de 2 a 4.
+[x] Enemigos: Slime (solo ataca), Goblin (70/30 ataca/aturde),
+    Rey Slime (50/30/20), Guardián Ancestral (40/30/30), con la tabla
+    del documento. Objetivo al azar entre los vivos.
+[x] Torre de 10 pisos: comunes al azar en 1-4 y 6-9 con +10% por piso,
+    jefes en 5 y 10.
+[x] Estados: Aturdimiento (pierde 1 turno), Veneno (5% al final del
+    turno, 3 turnos).
+[x] Experiencia fija por enemigo para los vivos, nivel x 100, +3%
+    compuesto, nivel máximo 20.
+[x] Partida: piso actual, la party se mantiene entre pisos, victoria al
+    ganar el piso 10, game over si cae toda la party.
+[x] Pantallas: Menú, Partidas guardadas (maqueta), Batalla, Resumen,
+    Inventario (maqueta).
 
 
 FALTA (en orden sugerido)
 -------------------------
-[ ] 1. Partida + Torre: clase que guarde la party y el piso alcanzado;
-       subir de a un piso; que la party NO se reinicie en cada piso;
-       game over vuelve al menú; ganar el piso 10 = fin del juego.
-       (Hoy cada batalla arranca con una party nueva de nivel 1:
-       ControladorDeBatalla.iniciarBatallaDePrueba.)
-[ ] 2. Ítems e Inventario: clase Item (abstracta) -> Consumible /
-       Equipable; Inventario de 6 espacios; 4 consumibles y 8 equipables
-       (2 por clase). Acción "Usar ítem" en la batalla.
-[ ] 3. Recompensas: oro/ítem por lista ponderada al ganar; jefes con
-       recompensa garantizada.
-[ ] 4. Guardar / cargar partida en archivo (botón del menú).
-[ ] 5. Efecto Escudo (mitad de daño, 2 turnos): decidir quién lo da.
-[ ] 6. 2 ataques especiales para cada jefe (pedido del grupo, falta
-       definir nombre y efecto).
-[ ] 7. Pantalla de resultados / estado de la party (la cátedra pide como
-       mínimo: inicio, estado de party, batalla, resultados).
-[ ] 8. Rebalancear jefes cuando la party suba de nivel de verdad.
-[ ] 9. Actualizar documento + diagramas oficiales para que coincidan con
-       el código (requisito de la cátedra). Ver diferencias abajo.
+[ ] 1. Ítems e Inventario: Item (abstracta) -> Consumible / Equipable;
+       Inventario de 6 espacios (solo consumibles; equipados no ocupan);
+       4 consumibles + 8 equipables (2 por clase). Acción "Usar ítem" en
+       la batalla (cuenta como el turno y da +10 de maná, salvo el
+       pergamino de turno extra).
+[ ] 2. Recompensas: oro/objetos por lista ponderada al ganar; jefes con
+       recompensas especiales (oro, ítems, pergaminos).
+[ ] 3. Guardar / cargar partida en archivo JSON (piso, party,
+       inventario) + llenar la pantalla de Partidas guardadas.
+[ ] 4. Escudo (mitad de daño, 2 turnos): el documento lo nombra pero no
+       dice quién lo da. Definir.
+[ ] 5. Actualizar diagrama de clases y diagramas de secuencia oficiales
+       con docs/diagrama-clases.mmd.
 
 
-DIFERENCIAS CÓDIGO vs DOCUMENTO ENTREGADO (decidir y alinear)
---------------------------------------------------------------
-- Curador, habilidad poderosa: doc = "Sanación Mayor (cura 45)";
-  código = "Revivir" (25% vida a un aliado / inmortal 2 turnos sobre sí).
-- Arquero, Disparo Certero: doc = "daño físico x1.5";
-  código = 40% de crítico con daño doble.
-- Slime: doc = "solo ataca"; código = 70% ataca / 30% Escupitajo.
-- Goblin: doc = 70/30 ataca/aturde; código = 50/30/20 con Golpe
-  Debilitante.
-- Jefes: doc = Rey Slime 70/30/20/25 y Guardián 120/45/30/35;
-  código = 200/55/25/30 y 220/56/25/32 (rebalance del 26/09).
-- Esqueleto: no figura en el doc (enemigo de prueba).
-- Pantallas: doc pide inicio/estado party/batalla/resultados;
-  hoy hay menú/torre/batalla/inventario.
-- Experiencia por enemigo (valores PROPUESTOS, a confirmar):
-  Slime 30, Goblin 50, Esqueleto 40, Rey Slime 250, Guardián 500.
+DECISIONES PENDIENTES (el documento no lo dice)
+------------------------------------------------
+- ¿Los personajes recuperan vida entre piso y piso? Hoy NO (la vida se
+  arrastra). Y como no hay habilidad que reviva, un caído queda caído
+  hasta... nunca (solo suben de nivel los vivos). Decidirlo junto con
+  los ítems.
+- ¿Subir de nivel cura del todo? Hoy SÍ.
+- Experiencia por enemigo (el doc dice "fija por tipo" sin números).
+  Propuesta: Slime 30, Goblin 50, Rey Slime 250, Guardián 500.
+- Balance: con los números del documento, 1000 partidas simuladas
+  (jugando razonable) se ganan las 1000; la party llega al piso 10 en
+  nivel 3-4. Si se quiere más dificultad, hay que cambiar los números
+  EN EL DOCUMENTO primero. (Escalando también a los jefes queda al
+  revés: 0 de 1000, imposible. Por eso los jefes no se escalan: la tabla
+  ya los marca como "Jefe (Piso 5)" y "Jefe Final (Piso 10)".)

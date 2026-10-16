@@ -1,7 +1,6 @@
-%% Diagrama de clases del CÓDIGO ACTUAL (16/10/2026).
-%% Pegar en https://mermaid.live (o en el mismo mermaid.ai que usaron en la
-%% entrega) para verlo. Sirve de base para actualizar el diagrama oficial:
-%% la cátedra pide que los diagramas coincidan con la implementación.
+%% Diagrama de clases del CÓDIGO ACTUAL (16/10/2026, alineado al documento).
+%% Pegar en https://mermaid.live (o en mermaid.ai, donde está el oficial).
+%% La cátedra pide que los diagramas coincidan con la implementación.
 classDiagram
     direction TB
 
@@ -27,6 +26,9 @@ classDiagram
         -int experiencia
         -Habilidad habilidadBasica
         -Habilidad habilidadPoderosa
+        -boolean defendiendo
+        -boolean aturdido
+        -int turnosVenenoRestantes
         +atacar(Combatiente objetivo) String
         +tieneManaPara(Habilidad h) boolean
         +usarHabilidad(Habilidad h, Combatiente objetivo) String
@@ -37,6 +39,7 @@ classDiagram
         +actualizarEfectosDeFinDeTurno() String
         +prepararParaNuevaBatalla()
         +aturdir()
+        +consumirAturdimiento() boolean
         +envenenar()
         +ganarExperiencia(int cantidad) int
         +getAtaque(boolean esMagico) int
@@ -63,9 +66,9 @@ classDiagram
         -double multiplicador
         -boolean esMagico
     }
-    class DisparoCertero
-    class Sanacion
-    class Revivir
+    class Curacion {
+        -int cantidad
+    }
 
     class Enemigo {
         <<abstract>>
@@ -83,7 +86,6 @@ classDiagram
     class Goblin
     class Jefe
     class JefeFinal
-    class Esqueleto
 
     class Party {
         -Personaje[] miembros
@@ -114,13 +116,42 @@ classDiagram
         -ordenarPorVelocidad(Combatiente[] orden)
     }
 
+    class Partida {
+        -Party party
+        -int pisoActual
+        -boolean ganada
+        -boolean perdida
+        +crearNueva()$ Partida
+        +registrarVictoria()
+        +registrarDerrota()
+        +estaTerminada() boolean
+    }
+
+    class ResultadoDeBatalla {
+        -int piso
+        -String nombreEnemigo
+        -boolean ganoLaParty
+        -int experienciaGanada
+        -String subidasDeNivel
+        -int rondasJugadas
+    }
+
     class GeneradorDeEnemigos {
         +crearEnemigoParaPiso(int piso) Enemigo
+    }
+
+    class ControladorDeJuego {
+        -Partida partida
+        -ControladorDeBatalla controladorDeBatalla
+        +nuevaPartida()
+        +empezarBatallaDelPisoActual() String
+        +cerrarBatalla() ResultadoDeBatalla
     }
 
     class ControladorDeBatalla {
         -Batalla batalla
         -GeneradorDeEnemigos generador
+        -ResultadoDeBatalla resultado
         +iniciarBatalla(Party party, int piso) String
         +atacar() String
         +usarHabilidad(boolean poderosa, Personaje aliado) String
@@ -131,8 +162,9 @@ classDiagram
 
     class VentanaPrincipal
     class PantallaMenu
-    class PantallaTorre
+    class PantallaPartidasGuardadas
     class PantallaBatalla
+    class PantallaResumenBatalla
     class PantallaInventario
     class JuegoConsola
 
@@ -146,22 +178,25 @@ classDiagram
     Enemigo <|-- Goblin
     Enemigo <|-- Jefe
     Enemigo <|-- JefeFinal
-    Enemigo <|-- Esqueleto
     Habilidad <|-- AtaqueConMultiplicador
-    Habilidad <|-- DisparoCertero
-    Habilidad <|-- Sanacion
-    Habilidad <|-- Revivir
+    Habilidad <|-- Curacion
 
     Personaje "1" o-- "2" Habilidad : tiene
     Party "1" o-- "2..4" Personaje : miembros
+    Partida --> "1" Party
     Batalla --> "1" Party
     Batalla --> "1" Enemigo
     GeneradorDeEnemigos ..> Enemigo : crea
     ControladorDeBatalla --> Batalla
     ControladorDeBatalla --> GeneradorDeEnemigos
+    ControladorDeBatalla ..> ResultadoDeBatalla : crea
+    ControladorDeJuego --> Partida
+    ControladorDeJuego --> ControladorDeBatalla
+    VentanaPrincipal --> ControladorDeJuego
     VentanaPrincipal *-- PantallaMenu
-    VentanaPrincipal *-- PantallaTorre
+    VentanaPrincipal *-- PantallaPartidasGuardadas
     VentanaPrincipal *-- PantallaBatalla
+    VentanaPrincipal *-- PantallaResumenBatalla
     VentanaPrincipal *-- PantallaInventario
     PantallaBatalla --> ControladorDeBatalla : avisa acciones
-    JuegoConsola --> ControladorDeBatalla : avisa acciones
+    JuegoConsola --> ControladorDeJuego : avisa acciones

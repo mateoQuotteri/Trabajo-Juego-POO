@@ -19,17 +19,15 @@ import java.awt.event.ActionListener;
 //   al enemigo y revisaba si alguien ganó. Todo eso pasó al
 //   ControladorDeBatalla / modelo. Acá solo quedan: dibujar, y avisar al
 //   controlador qué botón se tocó.
-// - Respeta el ORDEN POR VELOCIDAD: antes el jugador elegía a mano qué
-//   personaje actuaba y tocaba "Turno del Enemigo". Ahora la pantalla
-//   muestra de quién es el turno (lo decide el modelo) y el enemigo juega
-//   solo cuando le toca.
+// - Respeta el ORDEN POR VELOCIDAD: la pantalla muestra de quién es el
+//   turno (lo decide el modelo) y el enemigo juega solo cuando le toca.
 // - Muestra los estados (veneno, aturdido, defendiendo...) y los nombres
 //   reales de las habilidades con su costo; los botones de habilidad se
 //   bloquean si no alcanza el maná (documento: "la habilidad se muestra
 //   bloqueada").
 // - Si la habilidad es de apoyo (Curador), el jugador elige el aliado en
-//   un selector (antes curaba "al que tuviera menos vida" sin preguntar, y
-//   Revivir nunca podía apuntar a un caído).
+//   un selector (antes curaba "al que tuviera menos vida" sin preguntar).
+// - Al terminar la batalla se habilita "Ver resumen de batalla".
 public class PantallaBatalla extends JPanel {
 
     private VentanaPrincipal ventana;
@@ -50,6 +48,7 @@ public class PantallaBatalla extends JPanel {
     private JButton botonPoderosa;
     private JButton botonDefender;
     private JComboBox<String> selectorAliado;
+    private JButton botonResumen;
     private JTextArea areaLog;
 
     public PantallaBatalla(VentanaPrincipal ventana, ControladorDeBatalla controlador) {
@@ -149,14 +148,14 @@ public class PantallaBatalla extends JPanel {
 
         JPanel filaObjetivo = new JPanel();
         filaObjetivo.setOpaque(false);
-        JLabel etiquetaAliado = new JLabel("Objetivo aliado (curar/revivir):");
+        JLabel etiquetaAliado = new JLabel("Objetivo aliado (curar):");
         etiquetaAliado.setForeground(Color.LIGHT_GRAY);
         selectorAliado = new JComboBox<String>();
-        JButton botonVolver = new JButton("Volver a la Torre");
+        botonResumen = new JButton("Ver resumen de batalla");
         filaObjetivo.add(etiquetaAliado);
         filaObjetivo.add(selectorAliado);
         filaObjetivo.add(Box.createHorizontalStrut(30));
-        filaObjetivo.add(botonVolver);
+        filaObjetivo.add(botonResumen);
 
         botonAtacar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -178,9 +177,9 @@ public class PantallaBatalla extends JPanel {
                 mostrarResultado(controlador.defender());
             }
         });
-        botonVolver.addActionListener(new ActionListener() {
+        botonResumen.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                ventana.mostrarPantalla(VentanaPrincipal.TORRE);
+                ventana.mostrarResumen();
             }
         });
 
@@ -210,9 +209,10 @@ public class PantallaBatalla extends JPanel {
     // LO QUE PIDE LA VENTANA / LOS BOTONES
     // ======================================================================
 
-    public void empezarBatalla(int piso) {
+    // La llama VentanaPrincipal después de que el controlador ya armó la
+    // batalla del piso actual. Recibe el primer texto del log.
+    public void empezarBatalla(String log) {
         areaLog.setText("");
-        String log = controlador.iniciarBatallaDePrueba(piso);
 
         selectorAliado.removeAllItems();
         for (Personaje p : controlador.getBatalla().getParty().getMiembros()) {
@@ -286,7 +286,8 @@ public class PantallaBatalla extends JPanel {
 
     private void actualizarBotones(Personaje enTurno) {
         if (enTurno == null) {
-            etiquetaTurno.setText("Batalla terminada. Volvé a la Torre para elegir otro piso.");
+            etiquetaTurno.setText("Batalla terminada.");
+            botonResumen.setEnabled(true);
             botonAtacar.setEnabled(false);
             botonBasica.setEnabled(false);
             botonPoderosa.setEnabled(false);
@@ -294,6 +295,7 @@ public class PantallaBatalla extends JPanel {
             selectorAliado.setEnabled(false);
             return;
         }
+        botonResumen.setEnabled(false);
         Habilidad basica = enTurno.getHabilidadBasica();
         Habilidad poderosa = enTurno.getHabilidadPoderosa();
 

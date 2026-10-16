@@ -5,8 +5,10 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-// Pantalla de Inicio. Solo muestra botones y avisa qué eligió el jugador.
-// (Sin cambios de lógica el 16/10: solo se movió al paquete RPG.vista.)
+// Pantalla de Inicio / Menú (acordada con el profe):
+//   Iniciar partida -> arranca en el piso 1
+//   Cargar partida  -> abre la pantalla de Partidas guardadas
+//   Cerrar juego
 public class PantallaMenu extends JPanel {
 
     public PantallaMenu(final VentanaPrincipal ventana) {
@@ -27,32 +29,28 @@ public class PantallaMenu extends JPanel {
         subtitulo.setForeground(Color.LIGHT_GRAY);
         subtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton botonNuevaPartida = new JButton("Nueva Partida");
-        JButton botonCargarPartida = new JButton("Cargar Partida");
-        JButton botonSalir = new JButton("Salir");
+        JButton botonIniciar = new JButton("Iniciar partida");
+        JButton botonCargar = new JButton("Cargar partida");
+        JButton botonCerrar = new JButton("Cerrar juego");
 
-        JButton[] botones = {botonNuevaPartida, botonCargarPartida, botonSalir};
+        JButton[] botones = {botonIniciar, botonCargar, botonCerrar};
         for (JButton boton : botones) {
             boton.setAlignmentX(Component.CENTER_ALIGNMENT);
             boton.setMaximumSize(new Dimension(220, 35));
             boton.setFont(boton.getFont().deriveFont(14f));
         }
 
-        botonNuevaPartida.addActionListener(new ActionListener() {
+        botonIniciar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                ventana.mostrarPantalla(VentanaPrincipal.TORRE);
+                ventana.iniciarPartida();
             }
         });
-
-        botonCargarPartida.addActionListener(new ActionListener() {
+        botonCargar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(ventana,
-                        "Cargar Partida todavía no está implementado (falta el guardado en archivo).",
-                        "No disponible todavía", JOptionPane.INFORMATION_MESSAGE);
+                ventana.mostrarPantalla(VentanaPrincipal.PARTIDAS_GUARDADAS);
             }
         });
-
-        botonSalir.addActionListener(new ActionListener() {
+        botonCerrar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 System.exit(0);
             }
@@ -62,11 +60,11 @@ public class PantallaMenu extends JPanel {
         columna.add(Box.createVerticalStrut(5));
         columna.add(subtitulo);
         columna.add(Box.createVerticalStrut(40));
-        columna.add(botonNuevaPartida);
+        columna.add(botonIniciar);
         columna.add(Box.createVerticalStrut(10));
-        columna.add(botonCargarPartida);
+        columna.add(botonCargar);
         columna.add(Box.createVerticalStrut(10));
-        columna.add(botonSalir);
+        columna.add(botonCerrar);
 
         add(columna);
     }

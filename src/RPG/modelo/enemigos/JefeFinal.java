@@ -2,11 +2,10 @@ package RPG.modelo.enemigos;
 
 import RPG.modelo.personajes.Personaje;
 
-// Jefe final del Piso 10: "Guardián Ancestral". 40% ataca / 30% aturde /
-// 30% envenena. Stats rebalanceadas el 26/09 (la party pierde ~1 de cada 2).
-// Tampoco se escala por piso. Derrotarlo = ganar el juego.
-// OJO: el documento entregado todavía tiene los valores viejos (120/45/30/35).
-// PENDIENTE (pedido del grupo): 2 ataques especiales propios.
+// Jefe final del Piso 10: "Guardián Ancestral". Documento: 40% ataca /
+// 30% aturde / 30% envenena. Derrotarlo = ganar el juego.
+// Stats del documento: Vida 120, Ataque 45, Defensa 30, Velocidad 35.
+// No se escala por piso: la tabla ya lo define como "Jefe Final (Piso 10)".
 public class JefeFinal extends Enemigo {
 
     private static final String[] ACCIONES = {
@@ -15,9 +14,10 @@ public class JefeFinal extends Enemigo {
             "envenenar", "envenenar", "envenenar"      // 30%
     };
 
-    // vida, ataque, defensa, velocidad, nivel, experiencia que otorga
+    // vida, ataque, defensa, velocidad, experiencia que otorga
     public JefeFinal() {
-        super("Guardián Ancestral", 220, 56, 25, 32, 10, 500);
+        super("Guardián Ancestral", 120, 45, 30, 35, 500);
+        setNivel(10);
     }
 
     @Override

@@ -3,33 +3,23 @@ package RPG.controlador;
 import RPG.modelo.Batalla;
 import RPG.modelo.GeneradorDeEnemigos;
 import RPG.modelo.Party;
+import RPG.modelo.ResultadoDeBatalla;
 import RPG.modelo.enemigos.Enemigo;
 import RPG.modelo.habilidades.Habilidad;
-import RPG.modelo.personajes.Arquero;
-import RPG.modelo.personajes.Curador;
-import RPG.modelo.personajes.Guerrero;
-import RPG.modelo.personajes.Mago;
 import RPG.modelo.personajes.Personaje;
 
-// CONTROLADOR (la "C" de MVC, y GRASP Controlador).
-//
-// Recibe lo que eligió el jugador ("atacar", "usar habilidad poderosa
-// sobre tal aliado", "defender"), le pide al MODELO que lo ejecute, y le
-// devuelve a la VISTA un texto con lo que pasó. No dibuja nada ni lee del
-// teclado: por eso lo pueden usar TANTO la pantalla de Swing como la
-// prueba por consola, sin cambiar una línea.
-//
-// Reemplaza a MotorDeCombate (que mezclaba lógica de batalla con
-// Scanner/System.out) y saca la lógica de juego que estaba metida adentro
-// de PantallaBatalla (elegir enemigo por piso, quién cura a quién, turno
-// del enemigo...).
-//
+// CONTROLADOR de una batalla (la "C" de MVC, y GRASP Controlador).
 // Corresponde al ControladorDeBatalla de los 2 diagramas de secuencia.
+//
+// Recibe lo que eligió el jugador ("atacar", "usar habilidad poderosa",
+// "defender"), le pide al MODELO que lo ejecute y le devuelve a la VISTA un
+// texto con lo que pasó. No dibuja nada ni lee del teclado: por eso lo usan
+// igual la pantalla de Swing y la prueba por consola.
 public class ControladorDeBatalla {
 
     private GeneradorDeEnemigos generadorDeEnemigos;
     private Batalla batalla;
-    private boolean resultadoYaProcesado;
+    private ResultadoDeBatalla resultado;
 
     public ControladorDeBatalla() {
         generadorDeEnemigos = new GeneradorDeEnemigos();
@@ -42,24 +32,9 @@ public class ControladorDeBatalla {
     public String iniciarBatalla(Party party, int piso) {
         Enemigo enemigo = generadorDeEnemigos.crearEnemigoParaPiso(piso);
         batalla = new Batalla(party, enemigo, piso);
-        resultadoYaProcesado = false;
+        resultado = null;
         String log = "Piso " + piso + ": aparece " + enemigo.getNombre() + " (nivel " + enemigo.getNivel() + ").\n";
         return log + avanzarHastaTurnoDelJugador();
-    }
-
-    // TEMPORAL: hasta que exista la clase Partida/Torre (próximo paso), cada
-    // batalla de prueba arranca con una party nueva de nivel 1.
-    public String iniciarBatallaDePrueba(int piso) {
-        return iniciarBatalla(crearPartyDePrueba(), piso);
-    }
-
-    public static Party crearPartyDePrueba() {
-        Party party = new Party();
-        party.agregarMiembro(new Guerrero("Mateo"));
-        party.agregarMiembro(new Mago("Pedro"));
-        party.agregarMiembro(new Arquero("Cristian"));
-        party.agregarMiembro(new Curador("Evelyn"));
-        return party;
     }
 
     // ======================================================================
@@ -92,7 +67,7 @@ public class ControladorDeBatalla {
         }
         if (habilidad.esDeApoyo()) {
             if (!habilidad.puedeApuntarA(aliadoObjetivo)) {
-                return habilidad.getNombre() + " no se puede usar sobre ese objetivo.\n";
+                return habilidad.getNombre() + " solo se puede usar sobre un aliado vivo.\n";
             }
             String log = actor.usarHabilidad(habilidad, aliadoObjetivo) + "\n";
             return log + terminarTurnoDePersonaje(actor, true);
@@ -115,7 +90,7 @@ public class ControladorDeBatalla {
     // ======================================================================
 
     // Cierre común a cualquier acción de un personaje: maná por turno,
-    // efectos de fin de turno (veneno, duraciones) y pasar al siguiente.
+    // veneno al final del turno y pasar al siguiente.
     private String terminarTurnoDePersonaje(Personaje actor, boolean usoHabilidad) {
         String log = "";
         if (!usoHabilidad) {
@@ -126,14 +101,16 @@ public class ControladorDeBatalla {
         return log + avanzarHastaTurnoDelJugador();
     }
 
-    // Juega SOLO todo lo que no necesita al jugador: turnos del enemigo y
-    // personajes aturdidos. Frena cuando le toca a un personaje que sí
-    // puede elegir, o cuando la batalla termina.
+    // Juega solo todo lo que no necesita al jugador: turnos del enemigo y
+    // personajes aturdidos. Frena cuando le toca a un personaje que puede
+    // elegir, o cuando la batalla termina.
     private String avanzarHastaTurnoDelJugador() {
         String log = "";
         while (!batalla.estaTerminada()) {
             if (batalla.esTurnoDelEnemigo()) {
-                log += jugarTurnoDelEnemigo();
+                Personaje objetivo = batalla.getParty().elegirVivoAlAzar();
+                log += batalla.getEnemigo().actuar(objetivo) + "\n";
+                batalla.terminarTurnoActual();
                 continue;
             }
             Personaje personaje = batalla.getPersonajeEnTurno();
@@ -149,33 +126,25 @@ public class ControladorDeBatalla {
         return log + procesarFinDeBatalla();
     }
 
-    private String jugarTurnoDelEnemigo() {
-        Personaje objetivo = batalla.getParty().elegirVivoAlAzar();
-        String log = batalla.getEnemigo().actuar(objetivo) + "\n";
-        batalla.terminarTurnoActual();
-        return log;
-    }
-
-    // Se ejecuta una sola vez al terminar: experiencia (y más adelante
-    // oro/ítems) si ganó la party, o game over si perdió.
+    // Se ejecuta una sola vez al terminar: reparte experiencia si ganó la
+    // party y arma el ResultadoDeBatalla para la pantalla de resumen.
     private String procesarFinDeBatalla() {
-        if (resultadoYaProcesado) {
+        if (resultado != null) {
             return "";
         }
-        resultadoYaProcesado = true;
+        Enemigo enemigo = batalla.getEnemigo();
         if (!batalla.ganoLaParty()) {
+            resultado = new ResultadoDeBatalla(batalla.getPiso(), enemigo.getNombre(), false, 0, "",
+                    batalla.getNumeroRonda());
             return "Toda la party cayó. GAME OVER.\n";
         }
-        Enemigo enemigo = batalla.getEnemigo();
-        String log = "¡" + enemigo.getNombre() + " derrotado! Cada personaje vivo gana "
-                + enemigo.getExperienciaQueOtorga() + " de experiencia.\n";
-        log += lineaSiNoVacia(batalla.getParty().repartirExperiencia(enemigo.getExperienciaQueOtorga()));
-        if (batalla.getPiso() == GeneradorDeEnemigos.PISO_JEFE_FINAL) {
-            log += "¡VICTORIA! Completaron el ascenso a la Torre.\n";
-        }
-        // PENDIENTE: recompensas de oro/ítems por lista ponderada (los jefes
-        // garantizadas) -> depende de que existan Inventario e Item.
-        return log;
+        int experiencia = enemigo.getExperienciaQueOtorga();
+        String subidas = batalla.getParty().repartirExperiencia(experiencia);
+        resultado = new ResultadoDeBatalla(batalla.getPiso(), enemigo.getNombre(), true, experiencia, subidas,
+                batalla.getNumeroRonda());
+        // PENDIENTE: oro/ítems por lista ponderada (jefes: garantizados).
+        return "¡" + enemigo.getNombre() + " derrotado! Cada personaje vivo gana " + experiencia + " de experiencia.\n"
+                + lineaSiNoVacia(subidas);
     }
 
     private String lineaSiNoVacia(String texto) {
@@ -186,11 +155,16 @@ public class ControladorDeBatalla {
     }
 
     // ======================================================================
-    // CONSULTAS PARA LA VISTA (qué mostrar / qué botones habilitar)
+    // CONSULTAS PARA LA VISTA
     // ======================================================================
 
     public Batalla getBatalla() {
         return batalla;
+    }
+
+    // null mientras la batalla siga en curso.
+    public ResultadoDeBatalla getResultado() {
+        return resultado;
     }
 
     public Personaje getPersonajeEnTurno() {

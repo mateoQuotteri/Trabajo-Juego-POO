@@ -8,7 +8,7 @@ import java.awt.event.ActionListener;
 // Pantalla de Inventario: 6 espacios (los ítems equipados no ocupan lugar).
 // SIGUE SIENDO MAQUETA: muestra ítems fijos de ejemplo porque todavía no
 // existen las clases Inventario / Item del modelo (próximo paso).
-// (Sin cambios de lógica el 16/10: solo se movió al paquete RPG.vista.)
+// Se abre desde el Resumen de batalla (entre piso y piso) y vuelve ahí.
 public class PantallaInventario extends JPanel {
 
     private static final String[] ITEMS_DE_EJEMPLO = {
@@ -44,10 +44,10 @@ public class PantallaInventario extends JPanel {
                 + "no ocupan espacio acá.</center></html>", SwingConstants.CENTER);
         nota.setForeground(Color.LIGHT_GRAY);
 
-        JButton botonVolver = new JButton("Volver a la Torre");
+        JButton botonVolver = new JButton("Volver al resumen");
         botonVolver.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                ventana.mostrarPantalla(VentanaPrincipal.TORRE);
+                ventana.mostrarPantalla(VentanaPrincipal.RESUMEN);
             }
         });
 
