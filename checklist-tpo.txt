@@ -1,782 +1,99 @@
 CHECKLIST TPO - RPG POR TURNOS (Paradigma Orientado a Objetos - UADE)
 =======================================================================
-Última actualización: 25/09/2026. Se va a ir actualizando en cada cosa
-que agreguemos.
-Basado en la consigna oficial (Fase A: 18/09/2026 -> OJO, ES MAÑANA;
-Fase B: 06/11/2026).
-Todo lo implementado tiene que poder explicarse solo con conceptos
-vistos en clase (clases, herencia, clases abstractas, polimorfismo,
-encapsulamiento, Scanner, arrays, GRASP básico).
+Última actualización: 16/10/2026 (versión condensada).
+Entrega final (Fase B): primera semana de noviembre (06/11/2026).
+
+Esta versión reemplaza al checklist largo (narrativo, hasta el 26/09).
+Ese historial sigue en el repo de Git si hace falta consultarlo.
+El detalle de los cambios del 16/10 está en docs/CAMBIOS-16-10.docx.
+
+Fuente de verdad del diseño: el documento entregado en la Fase A
+(entregables-1/TPO-Grupo_16-TN1.docx.pdf) + las decisiones posteriores
+del grupo anotadas abajo en "DIFERENCIAS CÓDIGO vs DOCUMENTO".
 
 
-CAMBIO DE RUMBO (17/09/2026)
+ESTRUCTURA DEL CÓDIGO (MVC)
 ----------------------------
-Conrado compartió un documento de diseño nuevo y más completo
-(Diseno-RPG-POO2.docx, armado con el resto del grupo e incluyendo
-devoluciones de Conrado y Cristian) y pidió DESCARTAR todo el trabajo
-anterior (el sistema de atributos estilo KOTOR con Fuerza/Destreza/
-Stamina/Suerte/Inteligencia/Crítico, el reparto de puntos al crear y
-subir de nivel, y el sistema de 4 habilidades con niveles y puntos de
-habilidad de Sacerdote/Guerrero). A partir de ahora la ÚNICA fuente de
-verdad es ese documento. Todo lo de este checklist de aquí en adelante
-está basado en él. El código que ya existe en TPO-sandbox (Personaje,
-RepartidorAtributos, RepartidorHabilidades, las habilidades de
-Sacerdote y Guerrero) NO coincide con este diseño nuevo y hay que
-reescribirlo de cero (ver FALTA - FASE B).
-
-
-RESUMEN DEL DISEÑO NUEVO (según Diseno-RPG-POO2.docx)
--------------------------------------------------------
-
-1) Estructura del juego: la Torre
-   - Torre de 10 pisos. En cada piso se pelea contra enemigos generados
-     al azar entre los tipos disponibles para ese rango de pisos.
-   - Pisos 1 a 4: enemigos comunes (Slime, Goblin).
-   - Piso 5: primer jefe (recompensas especiales: pergaminos, oro, ítems).
-   - Pisos 6 a 9: enemigos comunes, ya escalados.
-   - Piso 10: jefe final (cierra el juego).
-   - Escalado de enemigos: las stats base se multiplican según el piso
-     (ej: +10% por piso). Ningún enemigo tiene stats "a mano" por piso.
-
-2) Orden de turnos
-   - Cada personaje/enemigo tiene Velocidad. Al arrancar cada ronda, se
-     ordena a todos (party + enemigo) de mayor a menor velocidad; ese
-     orden es en el que actúan. Se reordena al empezar cada ronda nueva.
-   - Empate de velocidad: se resuelve al azar.
-
-3) Escala de números
-   - Todo de 0 a 100. Los personajes arrancan en Nivel 1 con stats de
-     TOPE 50 (no cerca de 100), para dejar margen de crecimiento por
-     nivel e ítems.
-
-4) Las 4 clases - estadísticas de Nivel 1
-   (una sola Defensa, no se separa en física/mágica)
-
-   Estadística      | Guerrero | Mago | Arquero | Curador
-   Vida             |    50    |  25  |   30    |   35
-   Maná máximo      |    20    |  45  |   20    |   40
-   Ataque físico    |    40    |  10  |   35    |   15
-   Ataque mágico    |     0    |  40  |    5    |   20
-   Defensa          |    40    |  15  |   20    |   22
-   Velocidad        |    20    |  25  |   45    |   28
-
-   Perfil de cada clase:
-   - Guerrero: tanque (vida y defensa altas), daño puramente físico,
-     poco maná.
-   - Mago: vida y defensa bajísimas, mayor ataque mágico, mucho maná.
-   - Arquero: velocidad muy por encima del resto (actúa primero casi
-     siempre), daño físico.
-   - Curador: ataque bajo, maná alto, menor cooldown en su habilidad
-     básica (ver más abajo cómo funciona esto vía maná, no cooldown de
-     turnos).
-
-5) Acciones por turno: ataque básico + 2 habilidades (+ Defender para
-   el Guerrero)
-   - Ataque básico: gratis, no gasta maná, siempre disponible.
-   - Habilidad básica: gasta poco maná, se puede usar seguido.
-   - Habilidad poderosa: gasta bastante maná, pega mucho más fuerte.
-   - Las habilidades se limitan SOLO por maná (no hay cooldown en
-     turnos: sería un segundo sistema haciendo lo mismo que el maná).
-   - El Guerrero además puede Defender: reduce a la mitad el daño que
-     recibe ese turno.
-   - Todas las habilidades funcionan igual "por dentro" (quién la usa +
-     un objetivo + gasto de maná + efecto) -> se resuelve con
-     polimorfismo, sin casos especiales por clase.
-
-   Tabla de habilidades por clase:
-
-   Clase    | Habilidad básica                          | Costo | Habilidad poderosa                                    | Costo
-   Guerrero | Tajo (daño físico x1.5)                    |  10   | Golpe Poderoso (daño físico x2.5)                       |  20
-   Mago     | Chispa (daño mágico x1.5)                  |  10   | Bola de Fuego (daño mágico x2.5)                        |  30
-   Arquero  | Disparo Certero (40% crítico, daño doble)  |  10   | Lluvia de Flechas (daño físico x2.5)                    |  20
-   Curador  | Sanación (cura 20 de vida)                 |  10   | Revivir (revive a un aliado con 40 de vida)             |  30
-
-6) Cómo funciona el maná
-   - Arranca en 0 al empezar la batalla.
-   - Crece +10 o +15 por turno de ese personaje SOLO si no usó una
-     habilidad ese turno (falta confirmar si es +10 o +15: el documento
-     dice "+10/15", a preguntarle al grupo cuál es).
-   - Si usa una habilidad, se le resta el costo y ese turno no suma
-     maná (vuelve a crecer normal desde el turno siguiente).
-   - Una habilidad se puede usar mientras el maná actual >= costo; si
-     no alcanza, queda bloqueada ese turno. El ataque básico nunca se
-     bloquea.
-
-7) Cómo se calcula el daño
-   - daño = ataque del atacante - defensa del objetivo, mínimo 1.
-   - Ataque físico si el ataque/habilidad es físico, ataque mágico si
-     es mágico. La defensa es la misma para ambos casos.
-   - Las habilidades multiplican ese resultado según su multiplicador
-     (x1.5 o x2.5 de la tabla de arriba), por eso el daño de habilidad
-     escala solo con que el personaje suba de nivel.
-   - No hay precisión/evasión como mecánica: ningún ataque puede
-     "fallar", siempre es daño = ataque - defensa (mínimo 1). Fue una
-     decisión explícita para no sumar stats y balance nuevos sin
-     necesidad.
-
-8) Cómo decide el enemigo qué hacer (y cómo se reparten recompensas)
-   - Técnica de "lista ponderada": se arma un array con las acciones
-     posibles repetidas según su probabilidad (ej: 7 "atacar" + 3
-     "aturdir" en un array de 10), se elige un índice al azar 0-9, y lo
-     que esté en esa posición es lo que hace. Se reutiliza la misma
-     técnica para repartir recompensas al ganar una batalla (oro/ítem
-     sí o no, y cuál).
-   - Cuando el enemigo ataca, elige al azar a cuál personaje vivo de la
-     party atacar.
-
-9) Los enemigos (estadísticas base, piso 1; escalan según el piso)
-
-   Enemigo           | Vida | Ataque | Defensa | Velocidad | Comportamiento
-   Slime              |  25  |   12   |    5    |    12     | 70% ataca / 30% Escupitajo (especial)
-   Goblin             |  35  |   20   |   12    |    28     | 50% ataca / 30% aturde / 20% Golpe Debilitante (especial)
-   Jefe (piso 5)      | 200  |   55   |   25    |    30     | 50% ataca / 30% aturde / 20% envenena
-   Jefe final (piso10)| 220  |   56   |   25    |    32     | 40% ataca / 30% aturde / 30% envenena
-
-   Los jefes sueltan recompensas especiales garantizadas (pergaminos,
-   oro, ítems) al ser derrotados; los comunes no.
-
-   AGREGADO 25/09/2026 (pedido del grupo, además de este punto 9 y del
-   punto 10 de abajo): los 2 enemigos comunes tienen, cada uno, su
-   propio ataque especial (no está en la tabla original del documento
-   de diseño; ver sección aparte más abajo, "ATAQUES ESPECIALES DE LOS
-   ENEMIGOS COMUNES").
-
-   ACTUALIZADO 26/09/2026: los valores de Vida/Ataque/Defensa/Velocidad
-   de los 2 jefes de esta tabla cambiaron respecto de la versión
-   original del documento (Vida 70/Ataque 30/Defensa 20 el Rey Slime,
-   Vida 120/Ataque 45/Defensa 30 el Guardián Ancestral) -- el grupo
-   pidió que fueran mucho más difíciles. Ver sección aparte más abajo,
-   "BALANCE DE LOS JEFES", para cómo se llegó a estos números nuevos.
-
-10) Efectos de estado (los únicos 3 que va a haber; nada de
-    buffs/debuffs genéricos)
-    - Aturdimiento: pierde exactamente 1 turno (no se acumula).
-    - Veneno: al FINAL de su turno, recibe 5% de su vida máxima como
-      daño fijo, durante 3 turnos.
-    - Escudo: el daño que reciba se reduce a la mitad, durante 2 turnos.
-
-11) Subir de nivel
-    - Nivel máximo: 20. Al subir de nivel, TODAS las estadísticas
-      mejoran +3% (compuesto, no aditivo simple) -> llega a ~88 en
-      Nivel 20 (queda justo debajo del tope de 100).
-    - Experiencia para el próximo nivel = nivel actual x 100.
-    - Cada tipo de enemigo da una experiencia FIJA (un atributo simple
-      del enemigo), sin importar en qué piso apareció ni el nivel del
-      jugador. No hay ninguna fórmula que la recalcule.
-
-12) Ítems e inventario
-    - Inventario de 6 espacios, SOLO para consumibles y equipables que
-      todavía no están puestos: lo que ya está equipado NO ocupa
-      espacio.
-    - Equipables: 2 específicos por clase.
-
-      Clase    | Ítem 1                                | Ítem 2
-      Guerrero | Espada de hierro (+8 ataque físico)   | Escudo de madera (+8 defensa)
-      Mago     | Báculo arcano (+8 ataque mágico)      | Túnica encantada (+5 defensa, +5 maná máx.)
-      Arquero  | Arco largo (+8 ataque físico)         | Botas ligeras (+8 velocidad)
-      Curador  | Cetro sagrado (+8 ataque mágico)      | Amuleto de vida (+8 vida máxima)
-
-    - Consumibles: Poción de vida (+30 vida), Poción de maná (+20
-      maná), Pergamino de experiencia (da experiencia extra), Pergamino
-      de turno extra (el personaje actúa una vez más esa misma ronda;
-      usarlo NO consume el turno).
-    - Usar un ítem cuenta como la acción del turno, igual que atacar
-      (excepto el pergamino de turno extra).
-
-13) Recompensas y game over
-    - Al ganar una batalla: experiencia para toda la party, y con
-      cierta probabilidad oro o un ítem (misma técnica de lista
-      ponderada del punto 8). Los jefes dan recompensas garantizadas y
-      mejores.
-    - Game over si toda la party llega a 0 de vida.
-
-14) Guardado
-    - Estado de la party (nombre, nivel, experiencia, estadísticas,
-      inventario, piso de la Torre alcanzado) en un archivo JSON.
-    - Guardado MANUAL desde un botón del menú (no automático).
-
-15) Pantallas (mínimo 4)
-    - Inicio, estado de la party, batalla, resultados de la batalla.
-    - Las pantallas NO deciden nada: solo muestran información y
-      avisan qué eligió el jugador (arquitectura MVC).
-
-16) GRASP y MVC (por qué se separa todo así)
-    - GRASP: la clase que tiene los datos decide sobre esos datos (el
-      propio Personaje sabe si murió); quien necesita y usa un objeto
-      es quien lo crea (la clase que genera enemigos al azar los
-      crea); tiene que haber un Controlador que reciba la acción del
-      jugador y coordine sin mezclar lógica con pantalla; cada clase
-      conoce lo mínimo posible de las demás.
-    - Polimorfismo: todas las habilidades reciben "quién la usa" + un
-      objetivo -> el código de turno le dice al personaje "usá tu
-      habilidad" sin importarle la clase concreta. Con 2 habilidades
-      por personaje, sin esto serían 8 casos especiales a mano.
-    - MVC: Modelo (Personaje, Enemigo, Batalla, Torre, Inventario),
-      Vista (las 4 pantallas), Controlador (conecta la acción del
-      jugador con la lógica).
-
-17) Lo que EXPLÍCITAMENTE NO se va a hacer (para no volver sobre el
-    tema): decisiones narrativas que cambien la historia, sistema de
-    karma, buffs/debuffs como mecánica genérica (solo existen los 3
-    efectos de estado del punto 10).
-
-    ACTUALIZACIÓN 25/09/2026: el grupo pidió una excepción puntual a
-    esto -- los ataques especiales de Slime y Goblin (ver punto 9 y la
-    sección "ATAQUES ESPECIALES DE LOS ENEMIGOS COMUNES" más abajo).
-    No son un sistema genérico de buffs/debuffs (no hay ítems ni
-    habilidades de personaje que los usen, son 2 efectos puntuales y
-    fijos, uno por enemigo común), así que no contradicen el espíritu
-    del punto 17, pero técnicamente son 2 debuffs más además de los 3
-    "oficiales" del punto 10. Se deja anotado acá para que quede claro
-    que fue una decisión explícita y no un descuido.
+src/RPG/
+  Main.java                    -> abre la ventana de Swing
+  modelo/                      -> MODELO (reglas del juego, no dibuja nada)
+    Combatiente, Party, Batalla, GeneradorDeEnemigos
+    personajes/  Personaje, Guerrero, Mago, Arquero, Curador
+    enemigos/    Enemigo, Slime, Goblin, Jefe, JefeFinal, Esqueleto
+    habilidades/ Habilidad, AtaqueConMultiplicador, DisparoCertero,
+                 Sanacion, Revivir
+  controlador/                 -> CONTROLADOR
+    ControladorDeBatalla
+  vista/                       -> VISTA (Swing)
+    VentanaPrincipal, PantallaMenu, PantallaTorre, PantallaBatalla,
+    PantallaInventario
+  consola/                     -> vista de PRUEBA por consola
+    JuegoConsola (usa el mismo ControladorDeBatalla que Swing)
 
 
 YA HECHO
 --------
-[x] 18/09/2026: Personaje reescrito con el modelo de estadísticas nuevo
-    (vidaMaxima/vidaActual, manaMaximo/manaActual, ataqueFisico,
-    ataqueMagico, defensa única, velocidad, nivel, experiencia). Se
-    borró TODO lo del modelo viejo (Fuerza/Destreza/Inteligencia/
-    Espiritu/Suerte, RepartidorAtributos.java, RepartidorHabilidades.java
-    y las habilidades que ya estaban cargadas en Guerrero/Sacerdote).
-[x] Se renombraron las clases para que coincidan con el documento:
-    Cazador -> Arquero, Sacerdote -> Curador (mismo rol, nombre nuevo).
-[x] Las 4 clases (Guerrero, Mago, Arquero, Curador) tienen sus
-    estadísticas de Nivel 1 cargadas exactas según la tabla del
-    documento, verificadas imprimiéndolas por consola desde Main.
-[x] atacar() (ataque básico, gratis) y recibirDanio() reescritos con la
-    fórmula nueva: daño = ataqueFisico - defensa del objetivo, mínimo 1.
-    Probado contra un Esqueleto.
-[x] 25/09/2026: Habilidad básica + Habilidad poderosa por clase (Tajo/
-    Golpe Poderoso, Chispa/Bola de Fuego, Disparo Certero/Lluvia de
-    Flechas, Sanación/Sanación Mayor), Defender del Guerrero, y
-    crecimiento de maná por turno (+10 si no se usó habilidad).
-    Probado por consola en Main (ver más abajo, "25/09/2026 -
-    DESINCRONIZACIÓN DETECTADA").
-[ ] Todavía NO tiene: sistema de subir de nivel por experiencia real
-    (el método subirNivel() con +3% compuesto ya existe y se probó
-    aislado, pero no está conectado a ninguna fuente de experiencia
-    porque no hay motor de combate todavía).
+[x] 4 clases (Guerrero/Mago/Arquero/Curador) con stats de Nivel 1.
+[x] Habilidades como objetos (clase Habilidad + subclases). 16/10.
+[x] Ataque básico, habilidad básica, habilidad poderosa, Defender.
+[x] Maná: arranca en 0 en CADA batalla, +10 si no usó habilidad.
+[x] Habilidades bloqueadas si no alcanza el maná (no pierde el turno).
+[x] Orden de turnos por Velocidad, reordenado cada ronda, empate al azar
+    (ahora vive en Batalla).
+[x] UN enemigo por batalla (recomendación del profe). 16/10.
+[x] Party de 2 a 4 miembros validada. 16/10.
+[x] Enemigos: Slime, Goblin, Jefe (Rey Slime), Jefe Final (Guardián
+    Ancestral) + Esqueleto de prueba, con IA por lista ponderada.
+[x] Enemigo de cada piso generado al azar (GeneradorDeEnemigos) con
+    escalado +10% por piso (solo enemigos comunes). 16/10.
+[x] Efectos: Aturdimiento, Veneno, Inmortalidad (Revivir), -Velocidad
+    (Escupitajo), -Defensa (Golpe Debilitante), Sin curación (Toque de
+    Muerte).
+[x] Experiencia fija por enemigo, repartida a los vivos al ganar, sube
+    de nivel (nivel x 100) con +3% compuesto, tope nivel 20. 16/10.
+[x] ControladorDeBatalla: una sola lógica para Swing y para consola. 16/10.
+[x] Pantalla de Batalla conectada al controlador real: respeta orden por
+    Velocidad, el enemigo juega solo, muestra estados, elige aliado para
+    curar/revivir. 16/10.
+[x] Diagrama de clases del código actual (docs/diagrama-clases.mmd). 16/10.
 
 
-FALTA - FASE A (entrega 18/09/2026 -> ES MAÑANA)
---------------------------------------------------
-[ ] Documento de diseño formal para entregar: adaptar/formatear el
-    contenido de Diseno-RPG-POO2.docx (ya tiene prácticamente todo el
-    contenido) al formato que pide la cátedra.
-[ ] Diagrama de clases (UML): Personaje (abstracta) -> Guerrero, Mago,
-    Arquero, Curador; Enemigo (o jerarquía simple) -> Slime, Goblin,
-    Jefe, Jefe Final; Batalla, Party, Torre, Inventario, Item (y
-    subtipos equipable/consumible), Habilidad (básica/poderosa, con
-    polimorfismo), Controlador, y las 4 pantallas (Vista).
-[x] 2 diagramas de secuencia (borrador, para revisar en la reunión):
-    "usar una habilidad poderosa sobre un enemigo" y "resolver una
-    ronda completa de batalla ordenando por Velocidad". Publicados como
-    página aparte (no en este .txt): https://claude.ai/artifact/Kdpx5fsSTppkSVvcs4G4yd
-    Los nombres de método usados ahí son propuestos, no definitivos;
-    quedan a confirmar cuando se arme el diagrama de clases.
-[ ] Propuesta visual de las 4 pantallas (inicio, estado de la party,
-    batalla, resultados).
-[x] Confirmar con el grupo la duda pendiente del maná: ¿+10 o +15 por
-    turno sin usar habilidad? RESUELTO 25/09/2026: Diseno-RPG-POO.docx
-    (la versión con las devoluciones de Conrado y Cristian) dice +10
-    sin ambigüedad. Implementado así.
+FALTA (en orden sugerido)
+-------------------------
+[ ] 1. Partida + Torre: clase que guarde la party y el piso alcanzado;
+       subir de a un piso; que la party NO se reinicie en cada piso;
+       game over vuelve al menú; ganar el piso 10 = fin del juego.
+       (Hoy cada batalla arranca con una party nueva de nivel 1:
+       ControladorDeBatalla.iniciarBatallaDePrueba.)
+[ ] 2. Ítems e Inventario: clase Item (abstracta) -> Consumible /
+       Equipable; Inventario de 6 espacios; 4 consumibles y 8 equipables
+       (2 por clase). Acción "Usar ítem" en la batalla.
+[ ] 3. Recompensas: oro/ítem por lista ponderada al ganar; jefes con
+       recompensa garantizada.
+[ ] 4. Guardar / cargar partida en archivo (botón del menú).
+[ ] 5. Efecto Escudo (mitad de daño, 2 turnos): decidir quién lo da.
+[ ] 6. 2 ataques especiales para cada jefe (pedido del grupo, falta
+       definir nombre y efecto).
+[ ] 7. Pantalla de resultados / estado de la party (la cátedra pide como
+       mínimo: inicio, estado de party, batalla, resultados).
+[ ] 8. Rebalancear jefes cuando la party suba de nivel de verdad.
+[ ] 9. Actualizar documento + diagramas oficiales para que coincidan con
+       el código (requisito de la cátedra). Ver diferencias abajo.
 
 
-FALTA - FASE B (entrega 06/11/2026)
--------------------------------------
-[x] Reescribir Personaje (y las 4 subclases) desde cero con el modelo
-    nuevo: vida, maná (máximo + actual), ataque físico, ataque mágico,
-    defensa única, velocidad, nivel, experiencia. SIN los atributos
-    viejos (Fuerza/Destreza/Stamina/Suerte/Inteligencia/Crítico) y SIN
-    el reparto de puntos por consola. HECHO 18/09/2026 (ver YA HECHO).
-[x] Ataque básico (gratis) + Habilidad básica + Habilidad poderosa por
-    clase, con multiplicadores de daño de la tabla del punto 5, usando
-    polimorfismo (misma firma para las 4 clases, Personaje.
-    usarHabilidadBasica/usarHabilidadPoderosa son abstractos). Defender
-    solo para Guerrero. HECHO 25/09/2026.
-[x] Sistema de maná por turno (crece +10 si no se usó habilidad ese
-    turno, se resta el costo si se usó una habilidad). HECHO 25/09/2026.
-[x] Motor de combate por turnos (MotorDeCombate.java): ordenar party +
-    enemigos vivos por Velocidad al empezar cada ronda (selection sort
-    escrito a mano + desempate al azar), preguntar por consola la
-    acción de cada personaje (atacar/habilidad básica/poderosa/
-    Defender, con selección de objetivo), hacer actuar a los enemigos
-    automáticamente, reordenar en la ronda siguiente, y cortar cuando
-    un bando se queda sin vivos (victoria/game over). HECHO 25/09/2026,
-    probado de punta a punta (batalla completa, sin excepciones).
-    Los enemigos ahora deciden su propia acción por IA (ver más abajo,
-    "Jerarquía de Enemigo"); no hay Torre ni pisos todavía (se juega
-    una sola Batalla suelta).
-[ ] Torre de 10 pisos con generación aleatoria de enemigos por rango de
-    pisos y escalado de stats por piso (+10% por piso o similar).
-[x] Jerarquía de Enemigo: Slime, Goblin, Jefe ("Rey Slime", piso 5),
-    Jefe Final ("Guardián Ancestral", piso 10), cada uno en su propio
-    archivo bajo RPG.Personajes.ImplEnemigo, con las estadísticas base
-    de la tabla del punto 9 y su IA por lista ponderada (Enemigo.
-    elegirAccionPonderada/ejecutarAccionSobre, en Enemigo.java, son
-    helpers compartidos; cada subclase solo define su propio array de
-    probabilidades). Enemigo ahora tiene un método abstracto actuar()
-    y MotorDeCombate.jugarTurnoDeEnemigo() llama a enemigo.actuar()
-    (polimorfismo: ya no asume "siempre atacar"). Esqueleto se
-    mantiene como placeholder de prueba, con actuar() = siempre
-    atacar. HECHO 25/09/2026, probado con una batalla completa contra
-    Goblins (se vio el 30% de aturdir disparar en la corrida) y otra
-    contra el Jefe (se vio aturdir; ver Main.java).
-[x] Ataques especiales de Slime (Escupitajo) y Goblin (Golpe
-    Debilitante), pedidos por el grupo además de la tabla original de
-    comportamiento. HECHO 25/09/2026 (ver sección aparte más abajo,
-    "ATAQUES ESPECIALES DE LOS ENEMIGOS COMUNES", para el detalle
-    completo).
-[x] Esqueleto (el enemigo placeholder de prueba) dejó de "siempre
-    atacar": ahora tiene lista ponderada propia (50% atacar / 20%
-    aturdir / 20% envenenar / 10% Toque de Muerte, su ataque especial)
-    y un efecto NUEVO, Toque de Muerte, que impide que el objetivo
-    reciba cualquier curación (de ítem o de habilidad) durante 2
-    turnos. HECHO 25/09/2026 (ver sección aparte más abajo, "TOQUE DE
-    MUERTE DEL ESQUELETO", para el detalle completo).
-[x] Elección aleatoria de a qué personaje vivo de la party ataca el
-    enemigo. HECHO 25/09/2026 (MotorDeCombate.elegirPersonajeVivoAlAzar).
-[x] Efectos de estado - Aturdimiento y Veneno: HECHO 25/09/2026.
-    Personaje.aturdir()/estaAturdido()/consumirAturdimiento() (pierde 1
-    turno, no se acumula) y Personaje.envenenar()/estaEnvenenado()/
-    aplicarVenenoSiCorresponde() (5% de vida máxima al final de su
-    turno, durante 3 turnos). MotorDeCombate.jugarTurnoDePersonaje()
-    chequea el aturdimiento al empezar el turno (si estaba aturdido,
-    pierde el turno y ni siquiera se le muestra el menú de acciones) y
-    aplica el veneno al final del turno (haya podido actuar o no). Si
-    el personaje es inmortal (Revivir sobre sí misma), el veneno
-    también se bloquea, porque reutiliza el mismo recibirDanio() que
-    ya chequea inmortalidad. Probado en aislamiento (aturdir un turno,
-    consumirlo, veneno 3 turnos exactos, se apaga solo al 4to) y
-    también dentro de una batalla real contra el Jefe.
-[x] BUG ARREGLADO 25/09/2026 (de paso, al agregar los debuffs de los
-    especiales): la Inmortalidad de Revivir (Curador) nunca se agotaba
-    sola dentro de una batalla real -- Personaje.
-    reducirDuracionInmortalidad() solo se llamaba a mano desde las
-    pruebas de Main.java, MotorDeCombate nunca la llamaba. Se creó
-    Personaje.actualizarEfectosDeFinDeTurno(), que agrupa TODO lo que
-    tiene duración propia (Veneno, Inmortalidad, y los debuffs nuevos
-    de Velocidad/Defensa) en un solo método, y MotorDeCombate lo llama
-    al final de cada turno de personaje (reemplaza los 2 lugares donde
-    antes solo se llamaba aplicarVenenoSiCorresponde()). Así, de ahora
-    en más, la Inmortalidad SÍ se agota sola después de 2 turnos
-    también en una batalla jugada con el motor real.
-[ ] Efectos de estado - Escudo: mitad de daño recibido, 2 turnos.
-    Todavía ningún enemigo ni personaje lo aplica (ni Aturdimiento ni
-    Veneno de los enemigos actuales lo necesitan; falta decidir quién
-    lo otorga -- ¿un ítem futuro? ¿una habilidad? -- antes de
-    implementarlo).
-[ ] PRÓXIMO PASO pedido por el grupo (25/09/2026): el Jefe (piso 5) y
-    el Jefe Final (piso 10) deberían tener su ataque común + 2 ataques
-    especiales cada uno (por ahora Jefe y Jefe Final solo tienen
-    atacar/aturdir/envenenar de la lista "genérica" compartida de
-    Enemigo, sin ningún especial propio como sí tienen ahora Slime,
-    Goblin y Esqueleto). Falta definir con el grupo el nombre y efecto
-    de los 4 especiales nuevos (2 por jefe).
-[ ] Sistema de experiencia y nivel: experiencia fija por tipo de
-    enemigo, experiencia necesaria = nivel actual x 100, subida de
-    nivel = +3% compuesto a todas las estadísticas, hasta Nivel 20.
-[ ] Inventario de 6 espacios (equipados no ocupan espacio): 2
-    equipables por clase (ver tabla del punto 12) y los 4 consumibles
-    (poción de vida, poción de maná, pergamino de experiencia,
-    pergamino de turno extra).
-[ ] Recompensas al ganar batalla: experiencia siempre + oro/ítem por
-    probabilidad (lista ponderada), mejores y garantizadas en jefes.
-    Game over si toda la party llega a 0 de vida.
-[ ] Guardado/carga manual (botón de menú) del estado de la party en un
-    archivo JSON (nombre, nivel, experiencia, estadísticas, inventario,
-    piso alcanzado).
-[x] Las 4 pantallas mínimas, EN SWING: el grupo redefinió cuáles son
-    las 4 (26/09/2026) -- ya no "inicio/estado de la party/batalla/
-    resultados" sino Menú, Pisos de la Torre, Batalla e Inventario (la
-    de Batalla es la misma pantalla para cualquier piso, "con alguna
-    diferencia" -- ver sección aparte más abajo, "PANTALLAS EN SWING",
-    para el detalle completo). MAQUETA NAVEGABLE primero, como pidió
-    el grupo: layout y navegación reales entre las 4, con la lógica de
-    juego real conectada donde tiene sentido probarla (Batalla), pero
-    todavía sin el motor de turnos automático completo ni Torre/
-    Inventario reales. HECHO 26/09/2026, probado con capturas de
-    pantalla de las 4 y clickeando los botones de verdad (sin
-    excepciones). La consola (Main.java + MotorDeCombate) sigue
-    intacta, no se tocó nada de eso.
-[ ] Arquitectura MVC real: Modelo (Personaje/Enemigo/Batalla/Torre/
-    Inventario), Vista (las 4 pantallas -- ya arrancadas como maqueta,
-    ver arriba), Controlador (conecta acción del jugador con el
-    modelo). Falta conectar la Vista actual a un Controlador real que
-    reemplace a MotorDeCombate/Main por consola.
-[ ] Revisar que los diagramas de la Fase A queden consistentes con el
-    código final de la Fase B.
-
-
-25/09/2026 - DESINCRONIZACIÓN DETECTADA Y RESUELTA
-----------------------------------------------------
-Al retomar el TP una semana después (18/09 -> 25/09), el código que se
-compartió como "lo que tenemos hasta ahora" (Main.java, Party.java,
-Batalla.java, RepartidorAtributos.java, RepartidorHabilidades.java)
-resultó ser el diseño VIEJO (Cazador/Sacerdote, atributos Fuerza/
-Destreza/Inteligencia/Espiritu/Suerte repartidos por consola): el
-cambio de diseño del 17/09 nunca se había llegado a copiar del sandbox
-al proyecto real que estaba usando el grupo.
-
-Se confirmó con Conrado que se sigue con el diseño de stats (Guerrero/
-Mago/Arquero/Curador, Vida/Maná/Ataque físico/Ataque mágico/Defensa/
-Velocidad), respaldado ahora por DOS documentos que coinciden entre sí:
-Diseno-RPG-POO2.docx (17/09) y Diseno-RPG-POO.docx (subido 25/09, "la
-versión actualizada... incluidas las devoluciones de Conrado y
-Cristian"). Se migró todo el código a este diseño:
-- Personaje, Guerrero, Mago, Arquero, Curador: reescritos con
-  habilidades básica/poderosa + Defender + maná por turno (ver YA
-  HECHO y FALTA - FASE B, arriba).
-- RepartidorAtributos.java y RepartidorHabilidades.java: eliminados
-  (el diseño nuevo no reparte nada por consola).
-- NUEVO: se agregó una clase abstracta Combatiente (nombre, vida,
-  defensa, velocidad) de la que heredan Personaje y Enemigo. Hacía
-  falta porque las habilidades necesitan un "objetivo" común: el
-  Guerrero/Mago/Arquero atacan a un Enemigo, pero el Curador cura a un
-  Personaje aliado. Sin esta clase en común no se podía tener una sola
-  firma usarHabilidadBasica(objetivo)/usarHabilidadPoderosa(objetivo)
-  para las 4 clases (polimorfismo real, como pide el documento).
-- Enemigo ahora tiene defensa (no la tenía antes): la hace falta la
-  fórmula de daño nueva, que es simétrica (personaje ataca enemigo Y
-  enemigo ataca personaje con la misma cuenta).
-- Esqueleto se mantiene como enemigo de prueba placeholder (no es de
-  la tabla oficial Slime/Goblin/Jefe/Jefe Final, que sigue pendiente).
-
-RESUELTO 25/09/2026: la habilidad poderosa del Curador es "Revivir".
-Definición final de Conrado: revive al objetivo con 25% de SU vida
-máxima; pero si el Curador se la aplica a sí misma, en cambio le da
-inmortalidad durante 2 turnos (no pierde vida por ningún golpe
-mientras dure). Implementado y probado en Main:
-- Revivir(objetivo != this): objetivo.recibirCuracion(25% de
-  objetivo.getVidaMaxima()). Sirve tanto para revivir a alguien en 0
-  de vida como para curar de golpe a alguien que sigue en pie (mismo
-  método, sin necesitar detectar si estaba "muerto").
-- Revivir(objetivo == this, comparación de identidad): activa
-  turnosInmortalRestantes = 2 en el propio Curador. Mientras dure,
-  Personaje.recibirDanio() ignora cualquier daño por completo.
-- Se agregó Personaje.reducirDuracionInmortalidad(), pensado para que
-  lo llame el motor de turnos (todavía no existe) una vez por ronda.
-  Los demás efectos de estado con duración (Aturdimiento, Veneno,
-  Escudo) van a necesitar un mecanismo parecido cuando se hagan.
-
-También pendiente: la Fase A tenía entrega 18/09/2026, que ya pasó.
-Confirmar si se entregó y con qué contenido, para no perder de vista
-si el diagrama de clases y la propuesta visual de pantallas (que
-siguen sin hacer en este checklist) ya se armaron por otro lado.
-
-
-25/09/2026 - PROPUESTA GRÁFICA (2 imágenes)
----------------------------------------------
-El grupo compartió 2 imágenes de referencia: un mockup de la pantalla
-de batalla y una infografía "EL ASCENSO A LA TORRE" con los 10 pisos.
-Se usaron solo como referencia de nombres: los jefes ahora se llaman
-"Rey Slime" (piso 5) y "Guardián Ancestral" (piso 10) en el código
-(Jefe.java / JefeFinal.java), tomados de esa infografía.
-Los NÚMEROS de estadísticas que aparecen en el mockup de batalla (por
-ejemplo, un Guerrero con Vida 50/ManaMax 80/AtaqueFisico 55/
-AtaqueMagico 35/Defensa 30/Velocidad 30) NO se usaron, porque no
-coinciden con la tabla de la sección 4 de este documento (confirmada
-por Diseno-RPG-POO.docx y Diseno-RPG-POO2.docx). Se avisó esto al
-grupo: la tabla de los documentos de diseño sigue siendo la única
-fuente de verdad para stats; las imágenes son referencia visual/de
-nombres, no de números.
-Estas 2 pantallas (inicio y batalla) todavía no están construidas como
-interfaz real (eso arranca en la Clase 8, GUI en Java, según el
-cronograma) -- por ahora son solo la referencia visual para cuando se
-haga esa parte.
-
-
-25/09/2026 - ATAQUES ESPECIALES DE LOS ENEMIGOS COMUNES (Slime, Goblin)
---------------------------------------------------------------------------
-Pedido del grupo: que Slime y Goblin (los "enemigos comunes" del punto
-1 y 9) tengan, cada uno, un ataque especial además de lo que ya
-tenían, sumado a su lista ponderada de acciones.
-
-- Slime -> Escupitajo (dio el ejemplo el propio Conrado): un poco más
-  de daño que su ataque común (x1.3 sobre su Ataque, misma fórmula de
-  siempre -- daño = ataque especial - defensa del objetivo, mínimo 1),
-  y además baja 10 puntos la Velocidad del objetivo durante 2 turnos
-  (turnos propios del objetivo, se cuenta igual que el Veneno). Lista
-  ponderada final del Slime: 70% ataca / 30% Escupitajo (antes era
-  100% ataca, no tenía ninguna otra acción).
-
-- Goblin -> Golpe Debilitante (a elección del grupo entre las 2
-  opciones propuestas): un poco más de daño (mismo x1.3) y además baja
-  8 puntos la Defensa del objetivo durante 2 turnos. Se usó Defensa en
-  vez de Velocidad para diferenciarlo del Slime, y porque el Goblin ya
-  cubre el rol de "control" con Aturdir (30% de su lista), así que el
-  especial suma más presión de daño en vez de repetir control. Lista
-  ponderada final del Goblin: 50% ataca / 30% aturde / 20% Golpe
-  Debilitante (antes era 70%/30% solo con ataca/aturdir).
-
-Implementación (para que quede claro cómo se resolvió con lo visto en
-clase, sin adelantar contenido):
-- Enemigo.java ganó un helper protegido, calcularDanioConMultiplicador
-  (objetivo, multiplicador), que reutiliza la fórmula de siempre
-  (ataque - defensa, mínimo 1) pero multiplicando el ataque antes. Es
-  compartido porque la fórmula en sí es igual para cualquier especial
-  futuro; lo que cambia es el multiplicador y el efecto extra, y eso
-  lo decide cada subclase.
-- Slime.actuar()/Goblin.actuar() eligen la acción con la misma técnica
-  de lista ponderada que ya se usaba (Enemigo.elegirAccionPonderada),
-  y si sale "especial" llaman a un método PRIVADO propio de esa
-  subclase (usarEscupitajo / usarGolpeDebilitante) en vez de al
-  ejecutarAccionSobre() compartido -- porque estos 2 especiales no son
-  genéricos como atacar/aturdir/envenenar, cada uno es único de su
-  enemigo.
-- Personaje.java ganó reducirVelocidad(cantidad, turnos) y
-  reducirDefensa(cantidad, turnos), cada uno con su propia
-  "penalización" y contador de turnos (mismo patrón que ya usaba
-  Veneno). Se pisan (@Override) getVelocidad() y getDefensa()
-  (heredados de Combatiente) para descontar la penalización SIN tocar
-  el valor base -- así MotorDeCombate (que ya usa getVelocidad() para
-  ordenar los turnos) y las fórmulas de daño (que ya usan getDefensa()
-  del objetivo) reciben el valor correcto sin que haya que tocar nada
-  más en esos lugares (polimorfismo otra vez: ni el motor ni el
-  cálculo de daño necesitan saber que existe este debuff).
-- Ojo con subirNivel(): usa super.getDefensa()/super.getVelocidad() (y
-  no getDefensa()/getVelocidad() de Personaje) para crecer siempre
-  sobre el valor BASE real, por si alguien sube de nivel justo en
-  medio de uno de estos debuffs -- si no, el +3% se calcularía sobre
-  el valor ya reducido y el personaje se quedaría con menos stats para
-  siempre.
-- Probado en aislamiento (el debuff se aplica, se mantiene 2 turnos
-  exactos, se agota solo, y subir de nivel con el debuff activo no
-  contamina el valor base) y disparando actuar() muchas veces seguidas
-  para confirmar que las dos ramas "especial" realmente se ejecutan
-  (no solo quedan en el array sin usarse). También corrida una batalla
-  completa de punta a punta sin excepciones.
-
-
-25/09/2026 - TOQUE DE MUERTE DEL ESQUELETO
-----------------------------------------------
-Pedido del grupo: que el Esqueleto (el enemigo placeholder de prueba,
-no forma parte de la tabla oficial Slime/Goblin/Jefe/Jefe Final) deje
-de "siempre atacar" y tenga comportamiento real como los demás:
-
-- Ataque común: sin cambios (daño = ataque - defensa, mínimo 1).
-- Chance de Aturdir o de Envenenar al objetivo: reutiliza los 2
-  efectos de estado "oficiales" que ya existían (Personaje.aturdir()/
-  envenenar()) y el mecanismo compartido de Enemigo
-  (elegirAccionPonderada/ejecutarAccionSobre), el mismo que ya usaban
-  Goblin/Jefe/Jefe Final -- no hizo falta escribir nada nuevo para
-  esta parte.
-- Ataque especial propio, Toque de Muerte: mismo daño que el ataque
-  común (acá el pedido del grupo fue solo el efecto, sin pedir daño
-  extra como sí tienen Escupitajo/Golpe Debilitante) y además impide
-  que el objetivo reciba CUALQUIER curación -- de ítem (pociones,
-  cuando existan) o de habilidad (Sanación/Revivir del Curador) --
-  durante 2 turnos.
-Lista ponderada final del Esqueleto: 50% ataca / 20% aturde / 20%
-envenena / 10% Toque de Muerte (el especial se dejó más raro que las
-otras 2 acciones con efecto, porque el suyo es más fuerte: bloquea
-toda curación, no solo resta vida).
-
-Implementación: se agregó Personaje.aplicarImpedimentoDeCuracion
-(turnos) / estaImpedidoDeCurarse(), y se pisa (@Override)
-recibirCuracion() (heredado de Combatiente) para que, mientras el
-impedimento esté activo, CUALQUIER intento de curación se ignore
-directamente ahí. No hizo falta tocar Curador.java ni ningún lugar
-que cure (Sanación, Revivir, y a futuro las pociones): todos ya pasan
-por objetivo.recibirCuracion(cantidad), así que alcanza con bloquearlo
-en ese único punto (GRASP Information Expert otra vez: el propio
-Personaje es el único que necesita saber si puede curarse). La
-duración se agota con el mismo Personaje.actualizarEfectosDeFinDeTurno()
-que ya manejaba Veneno/Inmortalidad/los debuffs de Velocidad y
-Defensa -- no hizo falta tocar MotorDeCombate para esto.
-
-Probado en aislamiento: un intento de curación directa (recibirCuracion)
-bloqueado, un intento de curación vía habilidad (Sanación del Curador)
-también bloqueado, el impedimento agotándose solo después de exactamente
-2 turnos y permitiendo curarse normalmente después, y una corrida de
-muchos turnos del Esqueleto para confirmar que las 4 ramas de su lista
-ponderada (atacar/aturdir/envenenar/especial) se ejecutan de verdad.
-También una batalla completa de punta a punta sin excepciones.
-
-PENDIENTE (pedido para el próximo paso, no implementado todavía): el
-Jefe y el Jefe Final también deberían tener 2 ataques especiales cada
-uno, además de su ataque común (hoy solo tienen atacar/aturdir/envenenar
-de la lista genérica). Falta definir nombre y efecto de cada uno con
-el grupo antes de implementarlos.
-
-
-26/09/2026 - BALANCE DE LOS JEFES (Rey Slime y Guardián Ancestral)
-----------------------------------------------------------------------
-Pedido del grupo: el Rey Slime (piso 5) tenía que ser bastante más
-difícil que los enemigos de los pisos anteriores, más agresivo y
-poderoso, pero con una posibilidad "normal" de perder contra él (no
-imposible, pero un riesgo real). El Guardián Ancestral (piso 10, jefe
-final) tenía que ser todavía más difícil: una posibilidad de perder
-MÁS ALTA que contra el Rey Slime.
-
-Con los valores originales del documento (Rey Slime: Vida 70/Ataque
-30/Defensa 20; Guardián Ancestral: Vida 120/Ataque 45/Defensa 30) la
-party le ganaba SIEMPRE, en 2 o 3 rondas -- quedó demostrado con una
-simulación (ver abajo). Hacía falta reforzarlos mucho, y a ojo es
-difícil calcular cuánto: subir un solo punto de Defensa puede cambiar
-la tasa de victoria de la party de 100% a casi 0%, porque el daño de
-las habilidades (que multiplican el ataque x1.5/x2.5) se resta contra
-esa Defensa entera. Por eso, en vez de tantear números a mano, se
-armó una herramienta de simulación DESCARTABLE (SimulacionJefe.java,
-no quedó en la entrega) que:
-- Arma una party nueva de Nivel 1 (un personaje de cada clase, sin
-  ítems ni experiencia -- todavía no existe nada de eso en el motor)
-  y un "jefe de prueba" con Vida/Ataque/Defensa/Velocidad
-  configurables por parámetro.
-- Juega la batalla completa con una IA simple pero razonable para la
-  party (usa la habilidad más fuerte que el maná alcance a pagar;
-  el Curador prioriza revivir a un caído o curar al aliado peor
-  parado antes que atacar) y con la IA real por lista ponderada del
-  jefe (Enemigo.elegirAccionPonderada/ejecutarAccionSobre, la misma
-  que ya está en el motor de verdad).
-- Repite la batalla cientos/miles de veces y cuenta qué porcentaje
-  gana la party.
-
-Resultados de la simulación (1000 batallas por configuración):
-- Valores viejos del Rey Slime (Vida 70/Ataque 30/Defensa 20): la
-  party ganó 300/300 (100%) en las primeras 300 pruebas -- confirmado
-  que era demasiado fácil.
-- Rey Slime NUEVO (Vida 200, Ataque 55, Defensa 25, Velocidad 30): la
-  party ganó 644/1000 (64.4%) y perdió 356/1000 (35.6%) -- "una de
-  cada tres" aproximadamente, que se tomó como la posibilidad
-  "normal" de perder que pidió el grupo. Batallas de ~10-11 rondas en
-  promedio (más rápidas y contundentes que un jefe "pared de HP" --
-  encaja con "más agresivo" antes que "más resistente").
-- Guardián Ancestral NUEVO (Vida 220, Ataque 56, Defensa 25, Velocidad
-  32): la party ganó 483/1000 (48.3%) y perdió 517/1000 (51.7%) --
-  más de la mitad de las veces, claramente más alto que el ~35.6% del
-  Rey Slime, como pidió el grupo para el jefe final.
-
-Los valores de Ataque/Defensa/Velocidad de la lista ponderada de cada
-jefe (qué % ataca/aturde/envenena) NO cambiaron, solo Vida/Ataque/
-Defensa/Velocidad base -- ver Jefe.java y JefeFinal.java, que quedaron
-con un comentario explicando el cambio y remitiendo acá.
-
-OJO -- supuesto importante para cuando se siga trabajando en esto: la
-simulación usó una party de Nivel 1 fija, porque el sistema de
-experiencia/subida de nivel todavía no está conectado al motor de
-combate (ver FALTA - FASE B, "Sistema de experiencia y nivel"). En el
-juego real, para cuando un jugador llegue al Piso 10, su party ya
-debería haber subido bastante de nivel (+3% compuesto por nivel) y
-sería más fuerte que la party de Nivel 1 de esta simulación -- así que
-estos números de los jefes probablemente haya que volver a ajustarlos
-una vez que subir de nivel esté conectado de verdad a jugar batallas.
-Se deja anotado para no perderlo de vista.
-
-
-26/09/2026 - PANTALLAS EN SWING (maqueta navegable)
--------------------------------------------------------
-Pedido del grupo: definir las 4 pantallas mínimas usando Swing (la
-librería de GUI de Java que arrancó en la Clase 8, 25/09, según el
-cronograma -- primera vez que se usa en el TP, hasta ahora todo era
-por consola con Scanner). El grupo eligió cuáles son las 4:
-
-  1) Menú (Inicio)
-  2) Pisos de la Torre
-  3) Batalla
-  4) Inventario
-
-Esto reemplaza la lista original del documento de diseño (inicio,
-estado de la party, batalla, resultados) -- son 4 pantallas distintas
-a las que se habían anotado ahí, decisión del grupo.
-
-Se armó como MAQUETA NAVEGABLE (opción que eligió el grupo, no la
-versión ya conectada a la lógica completa): layout de verdad con
-componentes de Swing (JFrame, JPanel, JButton, JLabel, JProgressBar,
-JTextArea, JComboBox, CardLayout para pasar de una pantalla a otra) y
-navegación real entre las 4, pero con datos de ejemplo -- eso sí,
-usando objetos Personaje/Enemigo REALES (los mismos de siempre, no
-texto inventado), no el motor de turnos automático completo todavía.
-La consola (Main.java + MotorDeCombate, con su Scanner) sigue
-intacta, sin tocar; esta interfaz gráfica es un camino aparte por
-ahora.
-
-Estructura (paquete nuevo RPG.Vista, 5 archivos):
-- VentanaPrincipal.java: el JFrame. Arma las 4 pantallas una sola vez
-  y las va mostrando con CardLayout según lo que cada pantalla le
-  pida (documento, MVC: "las pantallas no deciden nada, solo avisan
-  qué eligió el jugador"). No se usó ninguna interface para esto (se
-  evitó a propósito, ver más abajo): cada pantalla guarda una
-  referencia directa a VentanaPrincipal y le llama mostrarPantalla
-  ("Menu"/"Torre"/"Batalla"/"Inventario").
-- PantallaMenu.java: título, "Nueva Partida" (-> Torre), "Cargar
-  Partida" (todavía no implementado, muestra un aviso -- falta el
-  guardado en JSON), "Salir".
-- PantallaTorre.java: los 10 pisos como botones; Piso 5 y Piso 10
-  destacados en rojo (Rey Slime / Guardián Ancestral). Elegir un piso
-  arma la batalla de ESE piso y muestra la pantalla de Batalla.
-- PantallaBatalla.java: la más grande. Es la MISMA pantalla para
-  cualquier piso -- "con alguna diferencia" (pedido del grupo) quiere
-  decir que si el piso es 5 o 10 aparece el Jefe correspondiente en
-  vez de un Slime/Goblin alternado, y el título avisa "¡BATALLA DE
-  JEFE!". Tiene barras de vida (jefe/party) y de maná (party) con
-  JProgressBar, un selector de qué personaje actúa (JComboBox), y
-  botones Atacar/Habilidad Básica/Habilidad Poderosa/Defender (solo
-  habilitado para el Guerrero)/Turno del Enemigo/Volver a la Torre,
-  todos conectados a los métodos REALES de Personaje/Enemigo (no son
-  botones decorativos): el Curador cura/revive automáticamente al
-  aliado con menos vida (mismo criterio que ya usa MotorDeCombate), y
-  "Turno del Enemigo" llama a enemigo.actuar() de verdad (la IA por
-  lista ponderada ya probada con Slime/Goblin/Jefe/Jefe Final).
-- PantallaInventario.java: grilla de 6 espacios; por ahora con 3
-  ítems de ejemplo fijos y 3 vacíos, porque todavía no existe la
-  clase Inventario/Item real (ver FALTA - FASE B). "Volver a la
-  Torre".
-
-Decisiones de diseño, para poder explicarlas si preguntan en la
-cátedra:
-- Los botones usan ActionListener con clases anónimas (`new
-  ActionListener() { public void actionPerformed(...) {...} }`) en
-  vez de lambdas (`e -> ...`). Funcionalmente es lo mismo, pero se
-  evitaron las lambdas porque son un tema de Java aparte de lo que
-  vimos hasta ahora (POO: clases/herencia/polimorfismo), mientras que
-  una clase anónima es "una clase más", más fácil de explicar con lo
-  ya visto.
-- No se usó ninguna interface propia (Navegador, Pantalla, etc.):
-  cada pantalla guarda una referencia directa a la clase concreta
-  VentanaPrincipal. ActionListener SÍ es una interface, pero es parte
-  de Swing (no la escribimos nosotros) y es contenido nuevo recién
-  introducido con la GUI en la Clase 8, así que no cuenta como
-  "adelantar" contenido de POO.
-- PantallaBatalla no arma la batalla de a poco por consola (como
-  MotorDeCombate): guarda el estado (party + enemigo actual) como
-  atributos de la pantalla y cada botón dispara UNA acción a la vez,
-  actualizando las barras después. Es una simplificación a propósito
-  de la maqueta -- conectar un motor de turnos real (con orden
-  automático por Velocidad, como ya tiene MotorDeCombate) queda para
-  la próxima etapa.
-
-Probado: se corrió la ventana completa en un entorno gráfico virtual
-(sin monitor real) y se sacaron capturas de pantalla de las 4
-pantallas (incluida la variante de Batalla contra un jefe) para
-revisar el diseño visual sin excepciones. Además, se clickearon de
-verdad los botones Atacar/Defender/Turno del Enemigo/Habilidad Básica
-con una herramienta de prueba aparte (no forma parte de la entrega) y
-se confirmó que el log de la pantalla se actualiza como corresponde,
-sin excepciones -- no son botones que solo se ven bien, funcionan.
-
-PENDIENTE para más adelante (no es parte de este pedido, se anota
-para no perderlo): conectar esta interfaz a un motor de turnos
-automático real (que reemplace elegir a mano personaje por personaje
-en PantallaBatalla), a la Torre real (con progreso guardado entre
-pisos, no siempre arrancando en el piso elegido con una party
-nueva), y al Inventario real (hoy son 3 ítems de ejemplo fijos). Los
-mensajes que imprime la lógica de juego por consola (System.out.
-println en Personaje/Enemigo) siguen yendo a la consola real, no al
-cuadro de texto de la pantalla -- la pantalla arma su propio mensaje
-aparte en paralelo; unificar esto en un solo lugar (para no tener que
-escribir el mensaje dos veces) es una mejora para más adelante, pero
-necesitaría algún mecanismo de callback/observer que por ahora se
-evitó para no adelantar contenido.
-
-
-NOTAS
------
-- Todo el código nuevo se prueba en una carpeta aparte (TPO-sandbox),
-  separada del repositorio Git real, hasta que decidan pasarlo al repo.
-- Cualquier cosa que se implemente tiene que poder explicarse solo con
-  lo visto en clase hasta el momento (sin adelantar contenido).
-- Fuente de verdad única a partir del 17/09/2026: Diseno-RPG-POO2.docx.
-  Si algo de este checklist contradice ese documento, gana el documento
-  y hay que avisar para corregir el checklist.
+DIFERENCIAS CÓDIGO vs DOCUMENTO ENTREGADO (decidir y alinear)
+--------------------------------------------------------------
+- Curador, habilidad poderosa: doc = "Sanación Mayor (cura 45)";
+  código = "Revivir" (25% vida a un aliado / inmortal 2 turnos sobre sí).
+- Arquero, Disparo Certero: doc = "daño físico x1.5";
+  código = 40% de crítico con daño doble.
+- Slime: doc = "solo ataca"; código = 70% ataca / 30% Escupitajo.
+- Goblin: doc = 70/30 ataca/aturde; código = 50/30/20 con Golpe
+  Debilitante.
+- Jefes: doc = Rey Slime 70/30/20/25 y Guardián 120/45/30/35;
+  código = 200/55/25/30 y 220/56/25/32 (rebalance del 26/09).
+- Esqueleto: no figura en el doc (enemigo de prueba).
+- Pantallas: doc pide inicio/estado party/batalla/resultados;
+  hoy hay menú/torre/batalla/inventario.
+- Experiencia por enemigo (valores PROPUESTOS, a confirmar):
+  Slime 30, Goblin 50, Esqueleto 40, Rey Slime 250, Guardián 500.
