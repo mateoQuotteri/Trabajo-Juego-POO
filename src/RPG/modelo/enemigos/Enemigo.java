@@ -48,6 +48,10 @@ public abstract class Enemigo extends Combatiente {
     public void escalarSegunPiso(int piso) {
     }
 
+    public void aplicarEscaladoDePiso(int piso) {
+
+    }
+
     public int getNivel() {
         return nivel;
     }
