@@ -1,63 +1,86 @@
 package RPG.vista;
 
-import javax.swing.*;
-import java.awt.*;
+import RPG.controlador.ControladorDeBatalla;
+import RPG.modelo.personajes.Personaje;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
-// Pantalla de Inventario: 6 espacios (los ítems equipados no ocupan lugar).
-// SIGUE SIENDO MAQUETA: muestra ítems fijos de ejemplo porque todavía no
-// existen las clases Inventario / Item del modelo (próximo paso).
-// Se abre desde el Resumen de batalla (entre piso y piso) y vuelve ahí.
+// PANTALLA 4: Inventario + resumen de la party.
+// Arriba: las estadísticas de cada héroe (tabla hecha con un GridLayout).
+// Abajo: los 6 espacios del inventario.
 public class PantallaInventario extends JPanel {
 
-    private static final String[] ITEMS_DE_EJEMPLO = {
-            "Poción de vida (+30 vida)",
-            "Poción de maná (+20 maná)",
-            "Pergamino de turno extra",
-            "", "", ""
+    private static final String[] COLUMNAS = {
+            "Nombre", "Clase", "Nivel", "Vida", "Maná", "Atq. Fís.", "Atq. Mág.", "Defensa", "Velocidad", "Exp."
     };
 
-    public PantallaInventario(final VentanaPrincipal ventana) {
-        setLayout(new BorderLayout(10, 10));
-        setBackground(new Color(32, 32, 42));
+    private ControladorDeBatalla controlador;
+    private JPanel tablaParty;
 
-        JLabel titulo = new JLabel("Inventario (6 espacios) - MAQUETA", SwingConstants.CENTER);
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 22));
-        titulo.setForeground(Color.WHITE);
-        titulo.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        add(titulo, BorderLayout.NORTH);
+    public PantallaInventario(final VentanaPrincipal ventana, ControladorDeBatalla controlador) {
+        this.controlador = controlador;
+        setLayout(new BorderLayout(10, 15));
+        setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
-        JPanel grillaSlots = new JPanel(new GridLayout(2, 3, 15, 15));
-        grillaSlots.setBorder(BorderFactory.createEmptyBorder(10, 60, 10, 60));
-        grillaSlots.setOpaque(false);
+        // ----- Estadísticas de la party (se llena en actualizar()) -----
+        tablaParty = new JPanel(new GridLayout(5, COLUMNAS.length, 5, 5));
+        tablaParty.setBorder(BorderFactory.createTitledBorder("Party"));
+        add(tablaParty, BorderLayout.NORTH);
 
-        for (String item : ITEMS_DE_EJEMPLO) {
-            boolean vacio = item.isEmpty();
-            JButton slot = new JButton(vacio ? "(vacío)" : item);
-            slot.setEnabled(!vacio);
-            grillaSlots.add(slot);
+        // ----- Inventario de 6 espacios -----
+        // TODO: todavía no existen las clases del inventario. Documento:
+        //  - Inventario de 6 espacios, solo consumibles (Poción de vida,
+        //    Poción de maná, Pergamino de experiencia, Pergamino de turno extra).
+        //  - Equipables: 2 por clase, NO ocupan espacio en el inventario.
+        // Cuando existan, estos botones deberían mostrar los ítems reales.
+        JPanel espacios = new JPanel(new GridLayout(2, 3, 10, 10));
+        espacios.setBorder(BorderFactory.createTitledBorder("Inventario (6 espacios)"));
+        for (int i = 0; i < 6; i++) {
+            JButton espacio = new JButton("(vacío)");
+            espacio.setEnabled(false);
+            espacios.add(espacio);
         }
-        add(grillaSlots, BorderLayout.CENTER);
-
-        JLabel nota = new JLabel("<html><center>Los ítems equipados (ej. Espada de hierro del Guerrero) "
-                + "no ocupan espacio acá.</center></html>", SwingConstants.CENTER);
-        nota.setForeground(Color.LIGHT_GRAY);
+        add(espacios, BorderLayout.CENTER);
 
         JButton botonVolver = new JButton("Volver al resumen");
         botonVolver.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                ventana.mostrarPantalla(VentanaPrincipal.RESUMEN);
+                ventana.irAResumen();
             }
         });
+        JPanel abajo = new JPanel();
+        abajo.add(botonVolver);
+        add(abajo, BorderLayout.SOUTH);
+    }
 
-        JPanel panelInferior = new JPanel(new BorderLayout());
-        panelInferior.setOpaque(false);
-        panelInferior.add(nota, BorderLayout.CENTER);
-        JPanel panelBoton = new JPanel();
-        panelBoton.setOpaque(false);
-        panelBoton.add(botonVolver);
-        panelInferior.add(panelBoton, BorderLayout.SOUTH);
-        add(panelInferior, BorderLayout.SOUTH);
+    // La llama la ventana al entrar a esta pantalla: vuelve a armar la
+    // tabla con los datos actuales de cada personaje.
+    public void actualizar() {
+        tablaParty.removeAll();
+        for (int i = 0; i < COLUMNAS.length; i++) {
+            tablaParty.add(new JLabel(COLUMNAS[i]));
+        }
+        Personaje[] miembros = controlador.getParty().getMiembros();
+        for (int i = 0; i < miembros.length; i++) {
+            Personaje p = miembros[i];
+            tablaParty.add(new JLabel(p.getNombre()));
+            tablaParty.add(new JLabel(p.getNombreClase()));
+            tablaParty.add(new JLabel("" + p.getNivel()));
+            tablaParty.add(new JLabel(p.getVidaActual() + "/" + p.getVidaMaxima()));
+            tablaParty.add(new JLabel("" + p.getManaMaximo()));
+            tablaParty.add(new JLabel("" + p.getAtaqueFisico()));
+            tablaParty.add(new JLabel("" + p.getAtaqueMagico()));
+            tablaParty.add(new JLabel("" + p.getDefensa()));
+            tablaParty.add(new JLabel("" + p.getVelocidad()));
+            tablaParty.add(new JLabel("" + p.getExperiencia()));
+        }
+        tablaParty.revalidate(); // avisa a Swing que cambió el contenido
+        tablaParty.repaint();
     }
 }

@@ -1,31 +1,23 @@
 package RPG.modelo.enemigos;
 
-import RPG.modelo.personajes.Personaje;
+import RPG.modelo.habilidades.Habilidad;
+import RPG.modelo.habilidades.HabilidadAtaque;
+import RPG.modelo.habilidades.HabilidadAturdir;
+import RPG.modelo.habilidades.HabilidadEnvenenar;
 
-// Jefe del Piso 5: "Rey Slime". Documento: 50% ataca / 30% aturde / 20% envenena.
-// Stats del documento: Vida 70, Ataque 30, Defensa 20, Velocidad 25.
-// No se escala por piso: la tabla ya lo define como "Jefe (Piso 5)".
+// Jefe del piso 5: "Rey Slime". Documento: 50% ataca / 30% aturde / 20% envenena.
 public class Jefe extends Enemigo {
 
-    private static final String[] ACCIONES = {
-            "atacar", "atacar", "atacar", "atacar", "atacar", // 50%
-            "aturdir", "aturdir", "aturdir",                  // 30%
-            "envenenar", "envenenar"                          // 20%
-    };
-
-    // vida, ataque, defensa, velocidad, experiencia que otorga
     public Jefe() {
-        super("Rey Slime", 70, 30, 20, 25, 250);
-        setNivel(5);
-    }
+        super("Rey Slime", 70, 30, 20, 25, 5, 250);
 
-    @Override
-    public String actuar(Personaje objetivo) {
-        return ejecutarAccionSobre(elegirAccionPonderada(ACCIONES), objetivo);
-    }
-
-    @Override
-    public boolean esJefe() {
-        return true;
+        Habilidad ataque = new HabilidadAtaque("Ataque", 0, 1.0, false);
+        Habilidad aturdir = new HabilidadAturdir();
+        Habilidad envenenar = new HabilidadEnvenenar();
+        setAcciones(new Habilidad[]{
+                ataque, ataque, ataque, ataque, ataque, // 50%
+                aturdir, aturdir, aturdir,              // 30%
+                envenenar, envenenar                    // 20%
+        });
     }
 }

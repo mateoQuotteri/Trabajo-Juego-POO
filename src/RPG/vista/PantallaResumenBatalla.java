@@ -1,139 +1,91 @@
 package RPG.vista;
 
-import RPG.modelo.Partida;
-import RPG.modelo.ResultadoDeBatalla;
-import RPG.modelo.personajes.Personaje;
-import javax.swing.*;
-import java.awt.*;
+import RPG.controlador.ControladorDeBatalla;
+import RPG.modelo.Batalla;
+import java.awt.BorderLayout;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
-// Pantalla de Resumen de batalla. Aparece al terminar cada pelea y muestra:
-//   - el resultado (victoria / derrota / juego ganado)
-//   - la experiencia ganada y quién subió de nivel
-//   - el ESTADO DE LA PARTY (nivel, vida, experiencia de cada uno)
-// Con esto cubre 2 de las pantallas mínimas de la cátedra en una sola:
-// "estado de personaje/party" y "resultados/resumen".
-//
-// Botones según el caso:
-//   ganó y quedan pisos -> Siguiente piso / Inventario / Guardar / Menú
-//   ganó el piso 10 o perdió -> solo Volver al menú
+// PANTALLA 3: Resumen de batalla.
+// Dice si se ganó o se perdió y deja seguir: siguiente piso, inventario
+// o volver al inicio.
 public class PantallaResumenBatalla extends JPanel {
 
-    private VentanaPrincipal ventana;
+    private ControladorDeBatalla controlador;
 
-    private JLabel etiquetaTitulo;
+    private JLabel etiquetaResultado;
     private JLabel etiquetaDetalle;
-    private JTextArea areaParty;
     private JButton botonSiguiente;
     private JButton botonInventario;
-    private JButton botonGuardar;
 
-    public PantallaResumenBatalla(VentanaPrincipal ventana) {
-        this.ventana = ventana;
-        setLayout(new BorderLayout(10, 10));
-        setBackground(new Color(30, 30, 40));
-        setBorder(BorderFactory.createEmptyBorder(20, 80, 20, 80));
+    public PantallaResumenBatalla(final VentanaPrincipal ventana, ControladorDeBatalla controlador) {
+        this.controlador = controlador;
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(60, 40, 40, 40));
 
-        JPanel superior = new JPanel();
-        superior.setOpaque(false);
-        superior.setLayout(new BoxLayout(superior, BoxLayout.Y_AXIS));
-        etiquetaTitulo = new JLabel("Resumen");
-        etiquetaTitulo.setFont(new Font("SansSerif", Font.BOLD, 26));
-        etiquetaTitulo.setForeground(Color.WHITE);
-        etiquetaTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
-        etiquetaDetalle = new JLabel(" ");
-        etiquetaDetalle.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        etiquetaDetalle.setForeground(Color.LIGHT_GRAY);
-        etiquetaDetalle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        superior.add(etiquetaTitulo);
-        superior.add(Box.createVerticalStrut(8));
-        superior.add(etiquetaDetalle);
-        add(superior, BorderLayout.NORTH);
+        JPanel textos = new JPanel(new BorderLayout());
+        etiquetaResultado = new JLabel("", JLabel.CENTER);
+        etiquetaResultado.setFont(new Font("SansSerif", Font.BOLD, 28));
+        etiquetaDetalle = new JLabel("", JLabel.CENTER);
+        textos.add(etiquetaResultado, BorderLayout.NORTH);
+        textos.add(etiquetaDetalle, BorderLayout.CENTER);
+        add(textos, BorderLayout.CENTER);
 
-        areaParty = new JTextArea();
-        areaParty.setEditable(false);
-        areaParty.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        JScrollPane scroll = new JScrollPane(areaParty);
-        scroll.setBorder(BorderFactory.createTitledBorder("Estado de la party"));
-        add(scroll, BorderLayout.CENTER);
+        // TODO: mostrar acá la experiencia ganada, quién subió de nivel y
+        // las recompensas (oro / ítems) cuando estén hechas.
 
         botonSiguiente = new JButton("Siguiente piso");
         botonInventario = new JButton("Inventario");
-        botonGuardar = new JButton("Guardar partida");
-        JButton botonMenu = new JButton("Volver al menú");
+        JButton botonInicio = new JButton("Volver al inicio");
 
         botonSiguiente.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                PantallaResumenBatalla.this.ventana.jugarPisoActual();
+                PantallaResumenBatalla.this.controlador.subirDePiso();
+                ventana.irABatalla();
             }
         });
         botonInventario.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                PantallaResumenBatalla.this.ventana.mostrarPantalla(VentanaPrincipal.INVENTARIO);
+                ventana.irAInventario();
             }
         });
-        botonGuardar.addActionListener(new ActionListener() {
+        botonInicio.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(PantallaResumenBatalla.this,
-                        "El guardado en archivo se implementa más adelante.",
-                        "No disponible todavía", JOptionPane.INFORMATION_MESSAGE);
-            }
-        });
-        botonMenu.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                PantallaResumenBatalla.this.ventana.mostrarPantalla(VentanaPrincipal.MENU);
+                ventana.irAInicio();
             }
         });
 
         JPanel botones = new JPanel();
-        botones.setOpaque(false);
         botones.add(botonSiguiente);
         botones.add(botonInventario);
-        botones.add(botonGuardar);
-        botones.add(botonMenu);
+        botones.add(botonInicio);
         add(botones, BorderLayout.SOUTH);
     }
 
-    // La llama VentanaPrincipal con el resultado que armó el controlador.
-    public void mostrar(ResultadoDeBatalla resultado, Partida partida) {
-        if (resultado == null) {
-            return;
-        }
-        if (!resultado.ganoLaParty()) {
-            etiquetaTitulo.setText("GAME OVER");
-            etiquetaTitulo.setForeground(new Color(230, 90, 90));
-            etiquetaDetalle.setText("La party cayó en el piso " + resultado.getPiso() + " contra "
-                    + resultado.getNombreEnemigo() + " (" + resultado.getRondasJugadas() + " rondas).");
-        } else if (partida.estaGanada()) {
-            etiquetaTitulo.setText("¡VICTORIA! Completaron la Torre");
-            etiquetaTitulo.setForeground(new Color(255, 210, 90));
-            etiquetaDetalle.setText(resultado.getNombreEnemigo() + " derrotado en " + resultado.getRondasJugadas()
-                    + " rondas. +" + resultado.getExperienciaGanada() + " de experiencia.");
+    // La llama la ventana al entrar a esta pantalla.
+    public void actualizar() {
+        Batalla batalla = controlador.getBatalla();
+        boolean puedeSeguir = false;
+
+        if (!batalla.ganoLaParty()) {
+            etiquetaResultado.setText("GAME OVER");
+            etiquetaDetalle.setText("La party cayó en el piso " + batalla.getPiso());
+        } else if (controlador.ganoElJuego()) {
+            etiquetaResultado.setText("¡GANASTE EL JUEGO!");
+            etiquetaDetalle.setText("Derrotaste al " + batalla.getEnemigo().getNombre());
         } else {
-            etiquetaTitulo.setText("Piso " + resultado.getPiso() + " superado");
-            etiquetaTitulo.setForeground(new Color(120, 220, 120));
-            etiquetaDetalle.setText(resultado.getNombreEnemigo() + " derrotado en " + resultado.getRondasJugadas()
-                    + " rondas. +" + resultado.getExperienciaGanada() + " de experiencia para cada personaje vivo.");
+            etiquetaResultado.setText("Piso " + batalla.getPiso() + " superado");
+            etiquetaDetalle.setText(batalla.getEnemigo().getNombre() + " derrotado en "
+                    + batalla.getNumeroRonda() + " rondas");
+            puedeSeguir = true;
         }
 
-        String texto = "";
-        if (!resultado.getSubidasDeNivel().isEmpty()) {
-            texto += resultado.getSubidasDeNivel() + "\n\n";
-        }
-        for (Personaje p : partida.getParty().getMiembros()) {
-            texto += String.format("%-10s %-9s Nv %2d   Vida %3d/%-3d   Exp %3d/%-4d %s%n",
-                    p.getNombre(), p.getNombreClase(), p.getNivel(), p.getVidaActual(), p.getVidaMaxima(),
-                    p.getExperiencia(), p.getExperienciaParaSiguienteNivel(), p.estaVivo() ? "" : "[CAÍDO]");
-        }
-        areaParty.setText(texto);
-
-        boolean sigue = !partida.estaTerminada();
-        botonSiguiente.setVisible(sigue);
-        botonInventario.setVisible(sigue);
-        botonGuardar.setVisible(sigue);
-        if (sigue) {
-            botonSiguiente.setText("Siguiente: piso " + partida.getPisoActual());
-        }
+        botonSiguiente.setVisible(puedeSeguir);
+        botonInventario.setVisible(puedeSeguir);
     }
 }

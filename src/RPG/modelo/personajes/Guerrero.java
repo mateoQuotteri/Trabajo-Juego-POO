@@ -1,16 +1,16 @@
 package RPG.modelo.personajes;
 
-import RPG.modelo.habilidades.AtaqueConMultiplicador;
+import RPG.modelo.habilidades.HabilidadAtaque;
 
-// Tanque: vida y defensa altas, daño puramente físico, poco maná.
-// Es el único que puede Defender.
+// Tanque: mucha vida y defensa, daño físico. Único que puede Defender.
 public class Guerrero extends Personaje {
 
-    // Valores de Nivel 1 (documento, tabla "Estadísticas Base").
+    // nombre, vida, maná, ataque físico, ataque mágico, defensa, velocidad
+    // (tabla "Estadísticas Base" del documento)
     public Guerrero(String nombre) {
         super(nombre, 50, 20, 40, 0, 40, 20,
-                new AtaqueConMultiplicador("Tajo", 10, 1.5, false),
-                new AtaqueConMultiplicador("Golpe Poderoso", 20, 2.5, false));
+                new HabilidadAtaque("Tajo", 10, 1.5, false),
+                new HabilidadAtaque("Golpe Poderoso", 20, 2.5, false));
     }
 
     @Override

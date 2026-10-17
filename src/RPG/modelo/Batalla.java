@@ -3,27 +3,16 @@ package RPG.modelo;
 import RPG.modelo.enemigos.Enemigo;
 import RPG.modelo.personajes.Personaje;
 
-// Una batalla: la party contra UN enemigo, en un piso de la Torre.
-//
-// CAMBIOS 16/10:
-// - UN solo enemigo por batalla (antes era un array de 4). Es la
-//   recomendación explícita del profe y lo que dice el documento entregado
-//   ("los 4 personajes + el enemigo").
-// - El orden de turnos (ordenar por Velocidad, desempate al azar) ahora
-//   vive acá y no en MotorDeCombate: Batalla es quien conoce a todos los
-//   participantes (GRASP Experto) y así coincide con el diagrama de
-//   secuencia 1 (Batalla -> ordenar(personajesVivos + enemigo)).
-// - La Batalla lleva la cuenta de "a quién le toca" (turno a turno). Esto
-//   es lo que permite que la pantalla de Swing respete el orden por
-//   Velocidad: la Vista no decide quién actúa, le pregunta al modelo.
+// Una batalla: la party contra UN enemigo (recomendación del profe).
+// Lleva el orden de turnos de la ronda y a quién le toca.
 public class Batalla {
 
     private Party party;
     private Enemigo enemigo;
     private int piso;
 
-    private Combatiente[] ordenDeLaRonda;
-    private int indiceTurnoActual;
+    private Combatiente[] ordenDeTurnos; // personajes vivos + el enemigo
+    private int turnoActual;             // posición en ordenDeTurnos
     private int numeroRonda;
 
     public Batalla(Party party, Enemigo enemigo, int piso) {
@@ -32,71 +21,60 @@ public class Batalla {
         this.piso = piso;
         this.numeroRonda = 0;
         party.prepararParaBatalla();
-        iniciarNuevaRonda();
+        empezarRonda();
     }
 
-    // ---------- Orden de turnos ----------
-
-    // Junta a los vivos (party + enemigo) y los ordena por Velocidad. Se
-    // llama al empezar cada ronda (documento: "se reordena al empezar cada
-    // ronda", porque la velocidad puede cambiar por el Escupitajo del Slime).
-    private void iniciarNuevaRonda() {
+    // Al empezar cada ronda se arma el orden de nuevo, porque puede haber
+    // muerto alguien.
+    private void empezarRonda() {
         numeroRonda++;
         Personaje[] vivos = party.getMiembrosVivos();
-        ordenDeLaRonda = new Combatiente[vivos.length + 1];
+        ordenDeTurnos = new Combatiente[vivos.length + 1];
         for (int i = 0; i < vivos.length; i++) {
-            ordenDeLaRonda[i] = vivos[i];
+            ordenDeTurnos[i] = vivos[i];
         }
-        ordenDeLaRonda[vivos.length] = enemigo;
-        ordenarPorVelocidad(ordenDeLaRonda);
-        indiceTurnoActual = 0;
+        ordenDeTurnos[vivos.length] = enemigo;
+        ordenarPorVelocidad();
+        turnoActual = 0;
     }
 
-    // Selection sort hecho a mano (sin Collections.sort ni Comparator).
-    // Empate de velocidad -> se decide al azar (documento).
-    private void ordenarPorVelocidad(Combatiente[] orden) {
-        for (int i = 0; i < orden.length - 1; i++) {
-            int indiceMejor = i;
-            for (int j = i + 1; j < orden.length; j++) {
-                int velJ = orden[j].getVelocidad();
-                int velMejor = orden[indiceMejor].getVelocidad();
-                if (velJ > velMejor || (velJ == velMejor && Math.random() < 0.5)) {
-                    indiceMejor = j;
+    // Selection sort de mayor a menor velocidad.
+    // Si empatan, se decide al azar (documento).
+    private void ordenarPorVelocidad() {
+        for (int i = 0; i < ordenDeTurnos.length - 1; i++) {
+            int mayor = i;
+            for (int j = i + 1; j < ordenDeTurnos.length; j++) {
+                int velJ = ordenDeTurnos[j].getVelocidad();
+                int velMayor = ordenDeTurnos[mayor].getVelocidad();
+                if (velJ > velMayor || (velJ == velMayor && Math.random() < 0.5)) {
+                    mayor = j;
                 }
             }
-            Combatiente temporal = orden[i];
-            orden[i] = orden[indiceMejor];
-            orden[indiceMejor] = temporal;
+            Combatiente aux = ordenDeTurnos[i];
+            ordenDeTurnos[i] = ordenDeTurnos[mayor];
+            ordenDeTurnos[mayor] = aux;
         }
     }
 
-    // A quién le toca actuar ahora. Saltea a los que murieron en el medio
-    // de la ronda, y si la ronda se terminó arranca otra. Devuelve null si
-    // la batalla ya terminó.
+    // A quién le toca. Saltea a los que murieron en esta ronda y, si la
+    // ronda terminó, arranca otra.
     public Combatiente getCombatienteActual() {
-        if (estaTerminada()) {
-            return null;
-        }
         while (true) {
-            while (indiceTurnoActual < ordenDeLaRonda.length) {
-                Combatiente actual = ordenDeLaRonda[indiceTurnoActual];
-                if (actual.estaVivo()) {
-                    return actual;
-                }
-                indiceTurnoActual++;
+            if (turnoActual >= ordenDeTurnos.length) {
+                empezarRonda();
             }
-            iniciarNuevaRonda();
+            if (ordenDeTurnos[turnoActual].estaVivo()) {
+                return ordenDeTurnos[turnoActual];
+            }
+            turnoActual++;
         }
     }
 
-    // ¿Le toca al enemigo? Se compara por identidad con el enemigo de esta
-    // batalla (así no hace falta preguntar "instanceof Enemigo").
     public boolean esTurnoDelEnemigo() {
         return getCombatienteActual() == enemigo;
     }
 
-    // El personaje que tiene el turno, o null si le toca al enemigo o la
-    // batalla terminó.
+    // Devuelve el personaje que tiene el turno, o null si le toca al enemigo.
     public Personaje getPersonajeEnTurno() {
         Combatiente actual = getCombatienteActual();
         Personaje[] miembros = party.getMiembros();
@@ -108,29 +86,25 @@ public class Batalla {
         return null;
     }
 
-    // El que estaba actuando ya terminó: pasa al siguiente.
-    public void terminarTurnoActual() {
-        indiceTurnoActual++;
+    public void pasarAlSiguienteTurno() {
+        turnoActual++;
     }
-
-    // ---------- Estado de la batalla ----------
 
     public boolean estaTerminada() {
         return !enemigo.estaVivo() || party.estaDerrotada();
     }
 
     public boolean ganoLaParty() {
-        return !enemigo.estaVivo() && !party.estaDerrotada();
+        return !enemigo.estaVivo();
     }
 
-    // Texto "Mago -> Goblin -> Guerrero..." para mostrar en pantalla.
-    public String describirOrdenDeLaRonda() {
+    public String getOrdenComoTexto() {
         String texto = "";
-        for (int i = 0; i < ordenDeLaRonda.length; i++) {
+        for (int i = 0; i < ordenDeTurnos.length; i++) {
             if (i > 0) {
-                texto += " -> ";
+                texto = texto + " -> ";
             }
-            texto += ordenDeLaRonda[i].getNombre();
+            texto = texto + ordenDeTurnos[i].getNombre();
         }
         return texto;
     }

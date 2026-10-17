@@ -1,78 +1,83 @@
 package RPG.vista;
 
-import RPG.controlador.ControladorDeJuego;
-import javax.swing.*;
+import RPG.controlador.ControladorDeBatalla;
 import java.awt.CardLayout;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 
-// Ventana principal (JFrame): arma las pantallas una sola vez y las va
-// mostrando con CardLayout. Cada pantalla solo avisa "el jugador tocó tal
-// botón"; ninguna decide reglas del juego (MVC).
+// La ventana del juego. Tiene las 4 pantallas y muestra una a la vez
+// (CardLayout = un mazo de cartas: se ve solo la de arriba).
 //
-// Pantallas acordadas con el profe (mínimas e indispensables):
-//   Menú (inicio)          -> Iniciar partida / Cargar partida / Cerrar juego
-//   Partidas guardadas     -> la abre "Cargar partida"
-//   Batalla
-//   Resumen de batalla     -> resultado + estado de la party + seguir
-//   Inventario
+// Las 4 pantallas acordadas con el profe:
+//   1. Inicio (con el menú)
+//   2. Batalla
+//   3. Resumen de batalla
+//   4. Inventario (con el resumen de la party y las estadísticas)
 //
-// Flujo: Menú -> Batalla (piso 1) -> Resumen -> Batalla (piso 2) -> ...
-//        hasta ganar el piso 10 o perder (vuelve al Menú).
+// Flujo: Inicio -> Batalla -> Resumen -> (Inventario) -> Batalla del
+// piso siguiente -> ... -> gana el piso 10 o pierde -> Inicio.
 public class VentanaPrincipal extends JFrame {
 
-    public static final String MENU = "Menu";
-    public static final String PARTIDAS_GUARDADAS = "PartidasGuardadas";
+    public static final String INICIO = "Inicio";
     public static final String BATALLA = "Batalla";
     public static final String RESUMEN = "Resumen";
     public static final String INVENTARIO = "Inventario";
 
-    private ControladorDeJuego controlador;
-    private CardLayout cardLayout;
+    private ControladorDeBatalla controlador;
+    private CardLayout cartas;
     private JPanel contenedor;
+
     private PantallaBatalla pantallaBatalla;
     private PantallaResumenBatalla pantallaResumen;
+    private PantallaInventario pantallaInventario;
 
     public VentanaPrincipal() {
         super("RPG - El Ascenso a la Torre");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(960, 680);
+        setSize(950, 650);
         setLocationRelativeTo(null);
 
-        controlador = new ControladorDeJuego();
+        controlador = new ControladorDeBatalla();
 
-        cardLayout = new CardLayout();
-        contenedor = new JPanel(cardLayout);
+        cartas = new CardLayout();
+        contenedor = new JPanel(cartas);
 
-        pantallaBatalla = new PantallaBatalla(this, controlador.getControladorDeBatalla());
-        pantallaResumen = new PantallaResumenBatalla(this);
-        contenedor.add(new PantallaMenu(this), MENU);
-        contenedor.add(new PantallaPartidasGuardadas(this), PARTIDAS_GUARDADAS);
+        pantallaBatalla = new PantallaBatalla(this, controlador);
+        pantallaResumen = new PantallaResumenBatalla(this, controlador);
+        pantallaInventario = new PantallaInventario(this, controlador);
+
+        contenedor.add(new PantallaInicio(this), INICIO);
         contenedor.add(pantallaBatalla, BATALLA);
         contenedor.add(pantallaResumen, RESUMEN);
-        contenedor.add(new PantallaInventario(this), INVENTARIO);
+        contenedor.add(pantallaInventario, INVENTARIO);
 
         add(contenedor);
-        mostrarPantalla(MENU);
+        cartas.show(contenedor, INICIO);
     }
 
-    public void mostrarPantalla(String nombre) {
-        cardLayout.show(contenedor, nombre);
+    // ---------- Navegación (la llaman los botones de cada pantalla) ----------
+
+    public void irAInicio() {
+        cartas.show(contenedor, INICIO);
     }
 
-    // Menú -> "Iniciar partida"
     public void iniciarPartida() {
         controlador.nuevaPartida();
-        jugarPisoActual();
+        irABatalla();
     }
 
-    // Resumen -> "Siguiente piso"
-    public void jugarPisoActual() {
-        pantallaBatalla.empezarBatalla(controlador.empezarBatallaDelPisoActual());
-        mostrarPantalla(BATALLA);
+    public void irABatalla() {
+        pantallaBatalla.empezar();
+        cartas.show(contenedor, BATALLA);
     }
 
-    // Batalla -> "Ver resumen" (cuando la batalla terminó)
-    public void mostrarResumen() {
-        pantallaResumen.mostrar(controlador.cerrarBatalla(), controlador.getPartida());
-        mostrarPantalla(RESUMEN);
+    public void irAResumen() {
+        pantallaResumen.actualizar();
+        cartas.show(contenedor, RESUMEN);
+    }
+
+    public void irAInventario() {
+        pantallaInventario.actualizar();
+        cartas.show(contenedor, INVENTARIO);
     }
 }

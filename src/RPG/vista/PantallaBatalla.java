@@ -2,45 +2,38 @@ package RPG.vista;
 
 import RPG.controlador.ControladorDeBatalla;
 import RPG.modelo.Batalla;
-import RPG.modelo.Party;
 import RPG.modelo.enemigos.Enemigo;
-import RPG.modelo.habilidades.Habilidad;
 import RPG.modelo.personajes.Personaje;
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 
-// Pantalla de Batalla (VISTA de MVC).
-//
-// CAMBIOS 16/10 (lo más grande de esta tanda en la Vista):
-// - Ya NO tiene lógica de juego adentro. Antes esta pantalla elegía el
-//   enemigo según el piso, decidía a quién curaba el Curador, hacía jugar
-//   al enemigo y revisaba si alguien ganó. Todo eso pasó al
-//   ControladorDeBatalla / modelo. Acá solo quedan: dibujar, y avisar al
-//   controlador qué botón se tocó.
-// - Respeta el ORDEN POR VELOCIDAD: la pantalla muestra de quién es el
-//   turno (lo decide el modelo) y el enemigo juega solo cuando le toca.
-// - Muestra los estados (veneno, aturdido, defendiendo...) y los nombres
-//   reales de las habilidades con su costo; los botones de habilidad se
-//   bloquean si no alcanza el maná (documento: "la habilidad se muestra
-//   bloqueada").
-// - Si la habilidad es de apoyo (Curador), el jugador elige el aliado en
-//   un selector (antes curaba "al que tuviera menos vida" sin preguntar).
-// - Al terminar la batalla se habilita "Ver resumen de batalla".
+// PANTALLA 2: Batalla.
+// Solo muestra el estado y le avisa al controlador qué botón se tocó.
+// No decide nada del juego (MVC).
 public class PantallaBatalla extends JPanel {
 
     private VentanaPrincipal ventana;
     private ControladorDeBatalla controlador;
 
-    private JLabel etiquetaTitulo;
-    private JLabel etiquetaOrden;
+    private JLabel etiquetaPiso;
     private JLabel etiquetaEnemigo;
-    private JProgressBar barraVidaEnemigo;
+    private JProgressBar barraEnemigo;
 
-    private JLabel[] etiquetasParty;
-    private JProgressBar[] barrasVida;
-    private JProgressBar[] barrasMana;
+    private JLabel[] nombresParty = new JLabel[4];
+    private JProgressBar[] barrasVida = new JProgressBar[4];
+    private JProgressBar[] barrasMana = new JProgressBar[4];
 
     private JLabel etiquetaTurno;
     private JButton botonAtacar;
@@ -49,263 +42,160 @@ public class PantallaBatalla extends JPanel {
     private JButton botonDefender;
     private JComboBox<String> selectorAliado;
     private JButton botonResumen;
-    private JTextArea areaLog;
+    private JTextArea log;
 
     public PantallaBatalla(VentanaPrincipal ventana, ControladorDeBatalla controlador) {
         this.ventana = ventana;
         this.controlador = controlador;
         setLayout(new BorderLayout(10, 10));
-        setBackground(new Color(18, 18, 24));
+        setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        add(armarPanelEnemigo(), BorderLayout.NORTH);
-        add(armarPanelParty(), BorderLayout.CENTER);
-        add(armarPanelInferior(), BorderLayout.SOUTH);
-    }
+        // ----- Arriba: piso y enemigo -----
+        JPanel arriba = new JPanel(new GridLayout(3, 1));
+        etiquetaPiso = new JLabel("Piso", JLabel.CENTER);
+        etiquetaPiso.setFont(new Font("SansSerif", Font.BOLD, 18));
+        etiquetaEnemigo = new JLabel("Enemigo", JLabel.CENTER);
+        barraEnemigo = new JProgressBar();
+        barraEnemigo.setStringPainted(true);
+        barraEnemigo.setForeground(new Color(180, 40, 40));
+        arriba.add(etiquetaPiso);
+        arriba.add(etiquetaEnemigo);
+        arriba.add(barraEnemigo);
+        add(arriba, BorderLayout.NORTH);
 
-    // ======================================================================
-    // ARMADO DE LA INTERFAZ (una sola vez)
-    // ======================================================================
-
-    private JPanel armarPanelEnemigo() {
-        JPanel panel = new JPanel();
-        panel.setOpaque(false);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 20, 5, 20));
-
-        etiquetaTitulo = crearEtiqueta("Piso", 20, Font.BOLD, Color.WHITE);
-        etiquetaOrden = crearEtiqueta("Orden de turnos", 12, Font.PLAIN, Color.LIGHT_GRAY);
-        etiquetaEnemigo = crearEtiqueta("Enemigo", 16, Font.BOLD, new Color(230, 120, 120));
-
-        barraVidaEnemigo = new JProgressBar();
-        barraVidaEnemigo.setStringPainted(true);
-        barraVidaEnemigo.setForeground(new Color(180, 40, 40));
-        barraVidaEnemigo.setMaximumSize(new Dimension(420, 22));
-        barraVidaEnemigo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        panel.add(etiquetaTitulo);
-        panel.add(Box.createVerticalStrut(4));
-        panel.add(etiquetaOrden);
-        panel.add(Box.createVerticalStrut(8));
-        panel.add(etiquetaEnemigo);
-        panel.add(Box.createVerticalStrut(4));
-        panel.add(barraVidaEnemigo);
-        return panel;
-    }
-
-    private JPanel armarPanelParty() {
-        int filas = Party.MAXIMO_MIEMBROS;
-        JPanel panel = new JPanel(new GridLayout(filas, 1, 5, 5));
-        panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createEmptyBorder(5, 40, 5, 40));
-
-        etiquetasParty = new JLabel[filas];
-        barrasVida = new JProgressBar[filas];
-        barrasMana = new JProgressBar[filas];
-
-        for (int i = 0; i < filas; i++) {
-            JPanel fila = new JPanel(new GridLayout(1, 3, 10, 0));
-            fila.setOpaque(false);
-
-            etiquetasParty[i] = new JLabel();
-            etiquetasParty[i].setForeground(Color.WHITE);
-
+        // ----- Centro: la party (nombre, vida, maná) -----
+        JPanel centro = new JPanel(new GridLayout(4, 3, 10, 5));
+        for (int i = 0; i < 4; i++) {
+            nombresParty[i] = new JLabel();
             barrasVida[i] = new JProgressBar();
             barrasVida[i].setStringPainted(true);
-            barrasVida[i].setForeground(new Color(40, 160, 60));
-
+            barrasVida[i].setForeground(new Color(40, 150, 60));
             barrasMana[i] = new JProgressBar();
             barrasMana[i].setStringPainted(true);
             barrasMana[i].setForeground(new Color(50, 100, 200));
-
-            fila.add(etiquetasParty[i]);
-            fila.add(barrasVida[i]);
-            fila.add(barrasMana[i]);
-            panel.add(fila);
+            centro.add(nombresParty[i]);
+            centro.add(barrasVida[i]);
+            centro.add(barrasMana[i]);
         }
-        return panel;
-    }
+        add(centro, BorderLayout.CENTER);
 
-    private JPanel armarPanelInferior() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setOpaque(false);
-
-        JPanel panelAcciones = new JPanel();
-        panelAcciones.setOpaque(false);
-        panelAcciones.setLayout(new BoxLayout(panelAcciones, BoxLayout.Y_AXIS));
-
-        etiquetaTurno = crearEtiqueta("Turno de ...", 15, Font.BOLD, new Color(255, 210, 90));
-
-        JPanel filaBotones = new JPanel();
-        filaBotones.setOpaque(false);
+        // ----- Abajo: botones y log -----
+        JPanel abajo = new JPanel(new BorderLayout(5, 5));
+        JPanel botones = new JPanel();
+        etiquetaTurno = new JLabel("Turno de ...");
         botonAtacar = new JButton("Atacar");
         botonBasica = new JButton("Habilidad básica");
         botonPoderosa = new JButton("Habilidad poderosa");
         botonDefender = new JButton("Defender");
-        filaBotones.add(botonAtacar);
-        filaBotones.add(botonBasica);
-        filaBotones.add(botonPoderosa);
-        filaBotones.add(botonDefender);
-
-        JPanel filaObjetivo = new JPanel();
-        filaObjetivo.setOpaque(false);
-        JLabel etiquetaAliado = new JLabel("Objetivo aliado (curar):");
-        etiquetaAliado.setForeground(Color.LIGHT_GRAY);
         selectorAliado = new JComboBox<String>();
-        botonResumen = new JButton("Ver resumen de batalla");
-        filaObjetivo.add(etiquetaAliado);
-        filaObjetivo.add(selectorAliado);
-        filaObjetivo.add(Box.createHorizontalStrut(30));
-        filaObjetivo.add(botonResumen);
+        botonResumen = new JButton("Ver resumen");
+        botones.add(etiquetaTurno);
+        botones.add(botonAtacar);
+        botones.add(botonBasica);
+        botones.add(botonPoderosa);
+        botones.add(botonDefender);
+        botones.add(new JLabel("Curar a:"));
+        botones.add(selectorAliado);
+        botones.add(botonResumen);
 
+        log = new JTextArea(8, 40);
+        log.setEditable(false);
+        abajo.add(botones, BorderLayout.NORTH);
+        abajo.add(new JScrollPane(log), BorderLayout.CENTER);
+        add(abajo, BorderLayout.SOUTH);
+
+        // ----- Qué hace cada botón: le avisa al controlador -----
         botonAtacar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                mostrarResultado(controlador.atacar());
+                mostrar(PantallaBatalla.this.controlador.atacar());
             }
         });
         botonBasica.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                mostrarResultado(controlador.usarHabilidad(false, getAliadoSeleccionado()));
+                mostrar(PantallaBatalla.this.controlador.usarHabilidad(false, aliadoElegido()));
             }
         });
         botonPoderosa.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                mostrarResultado(controlador.usarHabilidad(true, getAliadoSeleccionado()));
+                mostrar(PantallaBatalla.this.controlador.usarHabilidad(true, aliadoElegido()));
             }
         });
         botonDefender.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                mostrarResultado(controlador.defender());
+                mostrar(PantallaBatalla.this.controlador.defender());
             }
         });
         botonResumen.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                ventana.mostrarResumen();
+                PantallaBatalla.this.ventana.irAResumen();
             }
         });
-
-        panelAcciones.add(etiquetaTurno);
-        panelAcciones.add(filaBotones);
-        panelAcciones.add(filaObjetivo);
-
-        areaLog = new JTextArea(9, 40);
-        areaLog.setEditable(false);
-        areaLog.setLineWrap(true);
-        areaLog.setWrapStyleWord(true);
-
-        panel.add(panelAcciones, BorderLayout.NORTH);
-        panel.add(new JScrollPane(areaLog), BorderLayout.CENTER);
-        return panel;
     }
 
-    private JLabel crearEtiqueta(String texto, int tamanio, int estilo, Color color) {
-        JLabel etiqueta = new JLabel(texto);
-        etiqueta.setFont(new Font("SansSerif", estilo, tamanio));
-        etiqueta.setForeground(color);
-        etiqueta.setAlignmentX(Component.CENTER_ALIGNMENT);
-        return etiqueta;
-    }
-
-    // ======================================================================
-    // LO QUE PIDE LA VENTANA / LOS BOTONES
-    // ======================================================================
-
-    // La llama VentanaPrincipal después de que el controlador ya armó la
-    // batalla del piso actual. Recibe el primer texto del log.
-    public void empezarBatalla(String log) {
-        areaLog.setText("");
-
+    // La llama la ventana al entrar a esta pantalla.
+    public void empezar() {
+        log.setText("");
         selectorAliado.removeAllItems();
-        for (Personaje p : controlador.getBatalla().getParty().getMiembros()) {
-            selectorAliado.addItem(p.getNombre() + " (" + p.getNombreClase() + ")");
+        Personaje[] miembros = controlador.getParty().getMiembros();
+        for (int i = 0; i < miembros.length; i++) {
+            selectorAliado.addItem(miembros[i].getNombre());
         }
-        mostrarResultado(log);
+        mostrar(controlador.empezarBatalla());
     }
 
-    // Agrega al log lo que devolvió el controlador y redibuja todo.
-    private void mostrarResultado(String texto) {
-        if (texto != null && !texto.isEmpty()) {
-            areaLog.append(texto);
-            areaLog.setCaretPosition(areaLog.getDocument().getLength());
-        }
-        actualizarPantalla();
+    private Personaje aliadoElegido() {
+        return controlador.getParty().getMiembros()[selectorAliado.getSelectedIndex()];
     }
 
-    private Personaje getAliadoSeleccionado() {
-        int indice = selectorAliado.getSelectedIndex();
-        Personaje[] miembros = controlador.getBatalla().getParty().getMiembros();
-        if (indice < 0 || indice >= miembros.length) {
-            return null;
-        }
-        return miembros[indice];
+    // Agrega el texto al log y vuelve a dibujar todo.
+    private void mostrar(String texto) {
+        log.append(texto);
+        actualizar();
     }
 
-    // ======================================================================
-    // DIBUJAR EL ESTADO ACTUAL (solo lee el modelo, no lo modifica)
-    // ======================================================================
-
-    private void actualizarPantalla() {
+    private void actualizar() {
         Batalla batalla = controlador.getBatalla();
         Enemigo enemigo = batalla.getEnemigo();
 
-        String titulo = "Piso " + batalla.getPiso() + " - Ronda " + batalla.getNumeroRonda();
-        if (enemigo.esJefe()) {
-            titulo += "  ¡BATALLA DE JEFE!";
-        }
-        etiquetaTitulo.setText(titulo);
-        etiquetaOrden.setText("Orden de la ronda: " + batalla.describirOrdenDeLaRonda());
-        etiquetaEnemigo.setText(enemigo.getNombre() + " (nivel " + enemigo.getNivel() + ")");
-        barraVidaEnemigo.setMaximum(enemigo.getVidaMaxima());
-        barraVidaEnemigo.setValue(enemigo.getVidaActual());
-        barraVidaEnemigo.setString("Vida: " + enemigo.getVidaActual() + "/" + enemigo.getVidaMaxima());
+        etiquetaPiso.setText("Piso " + batalla.getPiso() + " - Ronda " + batalla.getNumeroRonda()
+                + "   (orden: " + batalla.getOrdenComoTexto() + ")");
+        etiquetaEnemigo.setText(enemigo.getNombre());
+        barraEnemigo.setMaximum(enemigo.getVidaMaxima());
+        barraEnemigo.setValue(enemigo.getVidaActual());
+        barraEnemigo.setString(enemigo.getVidaActual() + " / " + enemigo.getVidaMaxima());
 
         Personaje enTurno = controlador.getPersonajeEnTurno();
-        Personaje[] miembros = batalla.getParty().getMiembros();
-        for (int i = 0; i < etiquetasParty.length; i++) {
-            boolean hayMiembro = i < miembros.length;
-            etiquetasParty[i].setVisible(hayMiembro);
-            barrasVida[i].setVisible(hayMiembro);
-            barrasMana[i].setVisible(hayMiembro);
-            if (!hayMiembro) {
-                continue;
-            }
+        Personaje[] miembros = controlador.getParty().getMiembros();
+        for (int i = 0; i < miembros.length; i++) {
             Personaje p = miembros[i];
-            String marca = (p == enTurno) ? "▶ " : "   ";
-            String caido = p.estaVivo() ? "" : " [CAÍDO]";
-            etiquetasParty[i].setText(marca + p.getNombre() + " (" + p.getNombreClase() + " nv " + p.getNivel() + ")"
-                    + caido + p.describirEstados());
+            String marca = "";
+            if (p == enTurno) {
+                marca = "> ";
+            }
+            nombresParty[i].setText(marca + p.getNombre() + " (" + p.getNombreClase() + ")");
             barrasVida[i].setMaximum(p.getVidaMaxima());
             barrasVida[i].setValue(p.getVidaActual());
-            barrasVida[i].setString("Vida: " + p.getVidaActual() + "/" + p.getVidaMaxima());
+            barrasVida[i].setString("Vida " + p.getVidaActual() + " / " + p.getVidaMaxima());
             barrasMana[i].setMaximum(p.getManaMaximo());
             barrasMana[i].setValue(p.getManaActual());
-            barrasMana[i].setString("Maná: " + p.getManaActual() + "/" + p.getManaMaximo());
+            barrasMana[i].setString("Maná " + p.getManaActual() + " / " + p.getManaMaximo());
         }
 
-        actualizarBotones(enTurno);
-    }
-
-    private void actualizarBotones(Personaje enTurno) {
-        if (enTurno == null) {
-            etiquetaTurno.setText("Batalla terminada.");
-            botonResumen.setEnabled(true);
-            botonAtacar.setEnabled(false);
+        boolean terminada = (enTurno == null);
+        botonResumen.setEnabled(terminada);
+        botonAtacar.setEnabled(!terminada);
+        botonDefender.setEnabled(!terminada && enTurno.puedeDefender());
+        if (terminada) {
+            etiquetaTurno.setText("Batalla terminada");
             botonBasica.setEnabled(false);
             botonPoderosa.setEnabled(false);
-            botonDefender.setEnabled(false);
-            selectorAliado.setEnabled(false);
-            return;
+        } else {
+            etiquetaTurno.setText("Turno de " + enTurno.getNombre());
+            botonBasica.setText(enTurno.getHabilidadBasica().getNombre());
+            botonPoderosa.setText(enTurno.getHabilidadPoderosa().getNombre());
+            // Documento: si no alcanza el maná, la habilidad se muestra bloqueada.
+            botonBasica.setEnabled(enTurno.tieneManaPara(enTurno.getHabilidadBasica()));
+            botonPoderosa.setEnabled(enTurno.tieneManaPara(enTurno.getHabilidadPoderosa()));
         }
-        botonResumen.setEnabled(false);
-        Habilidad basica = enTurno.getHabilidadBasica();
-        Habilidad poderosa = enTurno.getHabilidadPoderosa();
-
-        etiquetaTurno.setText("Turno de " + enTurno.getNombre() + " (" + enTurno.getNombreClase() + ")");
-        botonAtacar.setEnabled(true);
-        botonBasica.setText(basica.getNombre() + " (" + basica.getCostoMana() + " MP)");
-        botonPoderosa.setText(poderosa.getNombre() + " (" + poderosa.getCostoMana() + " MP)");
-        botonBasica.setEnabled(controlador.puedeUsarHabilidad(false));
-        botonPoderosa.setEnabled(controlador.puedeUsarHabilidad(true));
-        botonDefender.setEnabled(enTurno.puedeDefender());
-        selectorAliado.setEnabled(basica.esDeApoyo() || poderosa.esDeApoyo());
     }
 }

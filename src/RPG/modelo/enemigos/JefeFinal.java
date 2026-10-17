@@ -1,32 +1,24 @@
 package RPG.modelo.enemigos;
 
-import RPG.modelo.personajes.Personaje;
+import RPG.modelo.habilidades.Habilidad;
+import RPG.modelo.habilidades.HabilidadAtaque;
+import RPG.modelo.habilidades.HabilidadAturdir;
+import RPG.modelo.habilidades.HabilidadEnvenenar;
 
-// Jefe final del Piso 10: "Guardián Ancestral". Documento: 40% ataca /
-// 30% aturde / 30% envenena. Derrotarlo = ganar el juego.
-// Stats del documento: Vida 120, Ataque 45, Defensa 30, Velocidad 35.
-// No se escala por piso: la tabla ya lo define como "Jefe Final (Piso 10)".
+// Jefe final del piso 10: "Guardián Ancestral".
+// Documento: 40% ataca / 30% aturde / 30% envenena.
 public class JefeFinal extends Enemigo {
 
-    private static final String[] ACCIONES = {
-            "atacar", "atacar", "atacar", "atacar",    // 40%
-            "aturdir", "aturdir", "aturdir",           // 30%
-            "envenenar", "envenenar", "envenenar"      // 30%
-    };
-
-    // vida, ataque, defensa, velocidad, experiencia que otorga
     public JefeFinal() {
-        super("Guardián Ancestral", 120, 45, 30, 35, 500);
-        setNivel(10);
-    }
+        super("Guardián Ancestral", 120, 45, 30, 35, 10, 500);
 
-    @Override
-    public String actuar(Personaje objetivo) {
-        return ejecutarAccionSobre(elegirAccionPonderada(ACCIONES), objetivo);
-    }
-
-    @Override
-    public boolean esJefe() {
-        return true;
+        Habilidad ataque = new HabilidadAtaque("Ataque", 0, 1.0, false);
+        Habilidad aturdir = new HabilidadAturdir();
+        Habilidad envenenar = new HabilidadEnvenenar();
+        setAcciones(new Habilidad[]{
+                ataque, ataque, ataque, ataque,         // 40%
+                aturdir, aturdir, aturdir,              // 30%
+                envenenar, envenenar, envenenar         // 30%
+        });
     }
 }

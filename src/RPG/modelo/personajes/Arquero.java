@@ -1,16 +1,14 @@
 package RPG.modelo.personajes;
 
-import RPG.modelo.habilidades.AtaqueConMultiplicador;
+import RPG.modelo.habilidades.HabilidadAtaque;
 
-// Velocidad muy por encima del resto (actúa primero casi siempre), daño físico.
-// Documento: Disparo Certero (físico x1.5, 10 MP) y Lluvia de Flechas
-// (físico x2.5, 20 MP).
+// El más rápido (casi siempre actúa primero), daño físico.
 public class Arquero extends Personaje {
 
     public Arquero(String nombre) {
         super(nombre, 30, 20, 35, 5, 20, 45,
-                new AtaqueConMultiplicador("Disparo Certero", 10, 1.5, false),
-                new AtaqueConMultiplicador("Lluvia de Flechas", 20, 2.5, false));
+                new HabilidadAtaque("Disparo Certero", 10, 1.5, false),
+                new HabilidadAtaque("Lluvia de Flechas", 20, 2.5, false));
     }
 
     @Override

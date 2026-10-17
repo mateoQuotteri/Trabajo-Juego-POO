@@ -1,20 +1,20 @@
 package RPG.modelo.enemigos;
 
-import RPG.modelo.personajes.Personaje;
+import RPG.modelo.habilidades.Habilidad;
+import RPG.modelo.habilidades.HabilidadAtaque;
 
-// Enemigo común. Documento: "Solo ataca, nunca aturde".
-// Stats piso 1: Vida 25, Ataque 12, Defensa 5, Velocidad 12.
+// Documento: "Solo ataca, nunca aturde".
 public class Slime extends Enemigo {
 
-    // vida, ataque, defensa, velocidad, experiencia que otorga
-    public Slime(String nombre) {
-        super(nombre, 25, 12, 5, 12, 30);
-    }
+    // nombre, vida, ataque, defensa, velocidad, nivel, experiencia que da
+    // (la experiencia no está en el documento: valor a definir)
+    public Slime() {
+        super("Slime", 25, 12, 5, 12, 1, 30);
 
-    // Su "lista ponderada" sería 10 veces "atacar": se simplifica a atacar
-    // siempre. Es igual un comportamiento distinto al del Goblin y los jefes.
-    @Override
-    public String actuar(Personaje objetivo) {
-        return atacar(objetivo);
+        Habilidad ataque = new HabilidadAtaque("Ataque", 0, 1.0, false);
+        setAcciones(new Habilidad[]{
+                ataque, ataque, ataque, ataque, ataque,
+                ataque, ataque, ataque, ataque, ataque   // 100% ataca
+        });
     }
 }
