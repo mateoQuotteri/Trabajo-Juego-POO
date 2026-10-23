@@ -125,6 +125,8 @@ public abstract class Personaje extends Combatiente {
         return ataqueFisico;
     }
 
+
+
     public Habilidad getHabilidadBasica() {
         return habilidadBasica;
     }

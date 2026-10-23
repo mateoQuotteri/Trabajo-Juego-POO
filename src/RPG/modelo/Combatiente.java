@@ -1,7 +1,8 @@
 package RPG.modelo;
 
 // Clase abstracta para todo el que pelea: Personaje y Enemigo heredan de acá.
-// (Pedido de la devolución: un tipo común para tratarlos igual en combate.)
+// Agregamos un metodo que se llama perderVida para tener 2 vias de poder generar un daño a un personaje (recibirDanio y perderVida)
+// que nos permita diferenciar si el daño viene por un ataque o por un envenamiento por ejemplo.
 public abstract class Combatiente {
 
     private String nombre;
@@ -10,7 +11,7 @@ public abstract class Combatiente {
     private int defensa;
     private int velocidad;
 
-    // Estados de alteración (documento 1.4.4)
+
     private boolean aturdido;
     private int turnosVenenoRestantes;
 
@@ -29,7 +30,11 @@ public abstract class Combatiente {
     public abstract int getAtaque(boolean esMagico);
 
     public void recibirDanio(int danio) {
-        vidaActual = vidaActual - danio;
+        perderVida(danio);
+    }
+
+    private void perderVida(int cantidadDeVidaParaPerder){
+        vidaActual = vidaActual - cantidadDeVidaParaPerder;
         if (vidaActual < 0) {
             vidaActual = 0;
         }
@@ -56,9 +61,6 @@ public abstract class Combatiente {
         return aturdido;
     }
 
-    // TODO: usar este método al empezar el turno del combatiente (ver
-    // ControladorDeBatalla). Si estaba aturdido, pierde el turno y
-    // el aturdimiento se apaga (documento: "pierde exactamente 1 turno").
     public void quitarAturdimiento() {
         aturdido = false;
     }
@@ -71,13 +73,22 @@ public abstract class Combatiente {
         return turnosVenenoRestantes > 0;
     }
 
-    // TODO: veneno. Documento: "inflige 5% de la vida máxima al FINAL del
-    // turno de la víctima, durante 3 turnos".
-    // Pista: si turnosVenenoRestantes > 0 -> recibirDanio(5% de vidaMaxima)
-    // y restar 1 a turnosVenenoRestantes. Devolver un texto para mostrar
-    // en el log de la pantalla (o "" si no pasó nada).
+
     public String aplicarVeneno() {
-        return "";
+        if (turnosVenenoRestantes  <= 0) {
+            return "";
+        }else  {
+            int danioAPegar = (int) Math.round(vidaMaxima * 0.05);
+            if (danioAPegar<1 ){
+                danioAPegar = 1;
+            }
+            perderVida(danioAPegar);
+            turnosVenenoRestantes--;
+            return nombre + " pierde " + danioAPegar + " de vida por el veneno";
+        }
+
+
+
     }
 
     protected void limpiarEstados() {
