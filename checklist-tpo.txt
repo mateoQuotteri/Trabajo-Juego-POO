@@ -47,20 +47,21 @@ YA FUNCIONA
 [x] Lo que pidió la devolución del profe: Combatiente como tipo común;
     atacar / usarHabilidad / Habilidad.ejecutar reciben Combatiente; los
     enemigos también usan habilidades.
+[x] Enemigo común elegido al azar entre Slime y Goblin; sus estadísticas
+    escalan +10% por piso desde el piso 2. Los jefes no escalan.
 
 
 PARA HACER (buscar "TODO" en el código: cada uno tiene una pista)
 -----------------------------------------------------------------
-[ ] Veneno: Combatiente.aplicarVeneno() y llamarlo en
-    ControladorDeBatalla.terminarTurno().
-[ ] Aturdimiento: que el aturdido pierda el turno
-    (ControladorDeBatalla.jugarTurnosDelEnemigo()).
-[ ] Experiencia y nivel: Personaje.ganarExperiencia() y repartirla al
-    ganar (ControladorDeBatalla.terminarBatalla()).
-[ ] Enemigo común al azar + escalado +10% por piso
-    (ControladorDeBatalla.crearEnemigo() y Enemigo.escalarSegunPiso()).
-[ ] Ítems e inventario: clases nuevas (Item, Inventario...), mostrarlos en
-    PantallaInventario y la acción "Usar ítem" en la batalla.
+[x] Veneno: Combatiente.aplicarVeneno() y procesarlo al terminar cada
+    turno, tanto para personajes como para enemigos.
+[x] Aturdimiento: el combatiente aturdido pierde su siguiente turno.
+[x] Experiencia y nivel: experiencia requerida = nivel actual x 100,
+    nivel máximo 20, +3% compuesto a las estadísticas al subir y reparto
+    al ganar entre los personajes vivos.
+[x] Ítems e inventario: clases Item, Consumible e Inventario; 6 espacios,
+    4 consumibles iniciales, uso desde inventario y durante la batalla
+    (consume el turno). La obtención como recompensa queda pendiente.
 [ ] Recompensas al ganar (oro / ítems, jefes siempre) y mostrarlas en
     PantallaResumenBatalla.
 [ ] Guardar / cargar partida (botón "Cargar partida" de PantallaInicio).

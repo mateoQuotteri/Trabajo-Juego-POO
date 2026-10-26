@@ -89,7 +89,14 @@ public abstract class Personaje extends Combatiente {
 
     // Documento: si no usó habilidad en su turno, recupera +10 de maná.
     public void recuperarMana() {
-        manaActual = manaActual + 10;
+        recuperarMana(10);
+    }
+
+    public void recuperarMana(int cantidad) {
+        if (cantidad <= 0) {
+            return;
+        }
+        manaActual = manaActual + cantidad;
         if (manaActual > manaMaximo) {
             manaActual = manaMaximo;
         }
@@ -104,15 +111,38 @@ public abstract class Personaje extends Combatiente {
 
     // ---------- Experiencia y nivel ----------
 
-    // TODO: documento 1.5 "Progresión".
-    //  - Nivel máximo 20.
-    //  - Experiencia necesaria para subir = nivel actual x 100.
-    //  - Al subir, TODAS las estadísticas suben +3% compuesto
-    //    (vida máxima, maná máximo, ataques, defensa y velocidad).
-    // Pista: sumar la experiencia; mientras alcance para subir, restar lo
-    // necesario y llamar a un método privado subirNivel() que use los
-    // setters protegidos de Combatiente (setVidaMaxima, setDefensa...).
     public void ganarExperiencia(int cantidad) {
+        if (cantidad <= 0 || nivel >= 20) {
+            return;
+        }
+
+        long experienciaAcumulada = (long) experiencia + cantidad;
+        while (nivel < 20 && experienciaAcumulada >= nivel * 100L) {
+            experienciaAcumulada -= nivel * 100L;
+            subirNivel();
+        }
+        experiencia = nivel == 20 ? 0 : (int) experienciaAcumulada;
+    }
+
+    private void subirNivel() {
+        int vidaMaximaAnterior = getVidaMaxima();
+        int vidaActualAnterior = getVidaActual();
+        setVidaMaxima(escalarStat(vidaMaximaAnterior));
+        setVidaActual(Math.min(getVidaMaxima(),
+                vidaActualAnterior + getVidaMaxima() - vidaMaximaAnterior));
+        setDefensa(escalarStat(getDefensa()));
+        setVelocidad(escalarStat(getVelocidad()));
+        manaMaximo = escalarStat(manaMaximo);
+        ataqueFisico = escalarStat(ataqueFisico);
+        ataqueMagico = escalarStat(ataqueMagico);
+        nivel++;
+    }
+
+    private int escalarStat(int valor) {
+        if (valor == 0) {
+            return 0;
+        }
+        return Math.max(1, (int) Math.round(valor * 1.03));
     }
 
     // ---------- Getters ----------
@@ -124,8 +154,7 @@ public abstract class Personaje extends Combatiente {
         }
         return ataqueFisico;
     }
-
-
+    
 
     public Habilidad getHabilidadBasica() {
         return habilidadBasica;

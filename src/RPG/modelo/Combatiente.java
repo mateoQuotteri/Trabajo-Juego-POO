@@ -50,6 +50,25 @@ public abstract class Combatiente {
     public boolean estaVivo() {
         return vidaActual > 0;
     }
+    
+    public void aplicarVeneno() {
+        turnosVenenoRestantes = 3;
+    }
+
+    public String procesarVenenoAlFinDeTurno() {
+        if (!estaVivo() || turnosVenenoRestantes <= 0) {
+            return "";
+        }
+
+        int danioVeneno = Math.max(1, (int) (vidaMaxima * 0.05));
+        recibirDanio(danioVeneno);
+        turnosVenenoRestantes--;
+        return nombre + " sufre " + danioVeneno + " de daño por veneno.\n";
+    }
+
+    public void limpiarAturdimiento() {
+        quitarAturdimiento();
+    }
 
     // ---------- Estados ----------
 
@@ -66,29 +85,11 @@ public abstract class Combatiente {
     }
 
     public void envenenar() {
-        turnosVenenoRestantes = 3;
+        aplicarVeneno();
     }
 
     public boolean estaEnvenenado() {
         return turnosVenenoRestantes > 0;
-    }
-
-
-    public String aplicarVeneno() {
-        if (turnosVenenoRestantes  <= 0) {
-            return "";
-        }else  {
-            int danioAPegar = (int) Math.round(vidaMaxima * 0.05);
-            if (danioAPegar<1 ){
-                danioAPegar = 1;
-            }
-            perderVida(danioAPegar);
-            turnosVenenoRestantes--;
-            return nombre + " pierde " + danioAPegar + " de vida por el veneno";
-        }
-
-
-
     }
 
     protected void limpiarEstados() {

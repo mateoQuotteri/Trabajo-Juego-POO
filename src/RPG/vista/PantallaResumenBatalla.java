@@ -20,6 +20,7 @@ public class PantallaResumenBatalla extends JPanel {
 
     private JLabel etiquetaResultado;
     private JLabel etiquetaDetalle;
+    private JLabel etiquetaExperiencia;
     private JButton botonSiguiente;
     private JButton botonInventario;
 
@@ -32,12 +33,11 @@ public class PantallaResumenBatalla extends JPanel {
         etiquetaResultado = new JLabel("", JLabel.CENTER);
         etiquetaResultado.setFont(new Font("SansSerif", Font.BOLD, 28));
         etiquetaDetalle = new JLabel("", JLabel.CENTER);
+        etiquetaExperiencia = new JLabel("", JLabel.CENTER);
         textos.add(etiquetaResultado, BorderLayout.NORTH);
         textos.add(etiquetaDetalle, BorderLayout.CENTER);
+        textos.add(etiquetaExperiencia, BorderLayout.SOUTH);
         add(textos, BorderLayout.CENTER);
-
-        // TODO: mostrar acá la experiencia ganada, quién subió de nivel y
-        // las recompensas (oro / ítems) cuando estén hechas.
 
         botonSiguiente = new JButton("Siguiente piso");
         botonInventario = new JButton("Inventario");
@@ -87,5 +87,11 @@ public class PantallaResumenBatalla extends JPanel {
 
         botonSiguiente.setVisible(puedeSeguir);
         botonInventario.setVisible(puedeSeguir);
+        String experiencia = controlador.getResumenExperiencia();
+        if (experiencia.isEmpty()) {
+            etiquetaExperiencia.setText("");
+        } else {
+            etiquetaExperiencia.setText("<html>" + experiencia.replace("\n", "<br>") + "</html>");
+        }
     }
 }
