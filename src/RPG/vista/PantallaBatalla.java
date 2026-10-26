@@ -3,6 +3,7 @@ package RPG.vista;
 import RPG.controlador.ControladorDeBatalla;
 import RPG.modelo.Batalla;
 import RPG.modelo.enemigos.Enemigo;
+import RPG.modelo.items.Item;
 import RPG.modelo.personajes.Personaje;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -10,10 +11,12 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -40,6 +43,7 @@ public class PantallaBatalla extends JPanel {
     private JButton botonBasica;
     private JButton botonPoderosa;
     private JButton botonDefender;
+    private JButton botonItem;
     private JComboBox<String> selectorAliado;
     private JButton botonResumen;
     private JTextArea log;
@@ -87,6 +91,7 @@ public class PantallaBatalla extends JPanel {
         botonBasica = new JButton("Habilidad básica");
         botonPoderosa = new JButton("Habilidad poderosa");
         botonDefender = new JButton("Defender");
+        botonItem = new JButton("Usar ítem");
         selectorAliado = new JComboBox<String>();
         botonResumen = new JButton("Ver resumen");
         botones.add(etiquetaTurno);
@@ -94,6 +99,7 @@ public class PantallaBatalla extends JPanel {
         botones.add(botonBasica);
         botones.add(botonPoderosa);
         botones.add(botonDefender);
+        botones.add(botonItem);
         botones.add(new JLabel("Curar a:"));
         botones.add(selectorAliado);
         botones.add(botonResumen);
@@ -125,6 +131,11 @@ public class PantallaBatalla extends JPanel {
                 mostrar(PantallaBatalla.this.controlador.defender());
             }
         });
+        botonItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                elegirItemParaUsar();
+            }
+        });
         botonResumen.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 PantallaBatalla.this.ventana.irAResumen();
@@ -145,6 +156,73 @@ public class PantallaBatalla extends JPanel {
 
     private Personaje aliadoElegido() {
         return controlador.getParty().getMiembros()[selectorAliado.getSelectedIndex()];
+    }
+
+    private void elegirItemParaUsar() {
+        List<Item> items = controlador.getParty().getInventario().getItems();
+        if (items.isEmpty()) {
+            mostrar("No hay ítems disponibles.\n");
+            return;
+        }
+
+        Object[] opcionesItem = new Object[items.size()];
+        for (int i = 0; i < items.size(); i++) {
+            Item item = items.get(i);
+            opcionesItem[i] = (i + 1) + ". " + item.getNombre() + " — " + item.getDescripcion();
+        }
+        Object seleccionItem = JOptionPane.showInputDialog(
+                this,
+                "Elegí el ítem que querés usar:",
+                "Usar ítem",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                opcionesItem,
+                opcionesItem[0]);
+        if (seleccionItem == null) {
+            return;
+        }
+
+        int indiceItem = -1;
+        for (int i = 0; i < opcionesItem.length; i++) {
+            if (opcionesItem[i].equals(seleccionItem)) {
+                indiceItem = i;
+                break;
+            }
+        }
+        if (indiceItem < 0) {
+            return;
+        }
+
+        Personaje[] vivos = controlador.getParty().getMiembrosVivos();
+        if (vivos.length == 0) {
+            mostrar("No hay personajes vivos para recibir el ítem.\n");
+            return;
+        }
+        Object[] opcionesObjetivo = new Object[vivos.length];
+        for (int i = 0; i < vivos.length; i++) {
+            Personaje personaje = vivos[i];
+            opcionesObjetivo[i] = personaje.getNombre() + " (Vida "
+                    + personaje.getVidaActual() + "/" + personaje.getVidaMaxima()
+                    + ", Maná " + personaje.getManaActual() + "/" + personaje.getManaMaximo() + ")";
+        }
+        Object seleccionObjetivo = JOptionPane.showInputDialog(
+                this,
+                "Elegí el personaje objetivo:",
+                "Usar " + items.get(indiceItem).getNombre(),
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                opcionesObjetivo,
+                opcionesObjetivo[0]);
+        if (seleccionObjetivo == null) {
+            return;
+        }
+
+        for (int i = 0; i < opcionesObjetivo.length; i++) {
+            if (opcionesObjetivo[i].equals(seleccionObjetivo)) {
+                mostrar(controlador.usarItemEnBatalla(items.get(indiceItem), vivos[i]));
+                return;
+            }
+        }
     }
 
     // Agrega el texto al log y vuelve a dibujar todo.
@@ -185,6 +263,7 @@ public class PantallaBatalla extends JPanel {
         botonResumen.setEnabled(terminada);
         botonAtacar.setEnabled(!terminada);
         botonDefender.setEnabled(!terminada && enTurno.puedeDefender());
+        botonItem.setEnabled(!terminada && !controlador.getParty().getInventario().getItems().isEmpty());
         if (terminada) {
             etiquetaTurno.setText("Batalla terminada");
             botonBasica.setEnabled(false);

@@ -1,5 +1,6 @@
 package RPG.modelo;
 
+import RPG.modelo.items.Inventario;
 import RPG.modelo.personajes.Personaje;
 
 // El grupo del jugador: mínimo 2 y máximo 4 personajes.
@@ -9,10 +10,12 @@ public class Party {
 
     private Personaje[] miembros;
     private int cantidad;
+    private Inventario inventario;
 
     public Party() {
         miembros = new Personaje[4];
         cantidad = 0;
+        this.inventario = new Inventario();
     }
 
     // Devuelve false si la party ya tiene 4.
@@ -63,6 +66,10 @@ public class Party {
             return null;
         }
         return vivos[(int) (Math.random() * vivos.length)];
+    }
+    
+    public Inventario getInventario() {
+        return inventario;
     }
 
     // Game over: todos con vida 0.

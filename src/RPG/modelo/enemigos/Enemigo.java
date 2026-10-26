@@ -10,7 +10,11 @@ import RPG.modelo.habilidades.Habilidad;
 // En su turno se elige una posición al azar entre 0 y 9.
 public abstract class Enemigo extends Combatiente {
 
+    private final int vidaMaximaBase;
     private int ataque;
+    private final int ataqueBase;
+    private final int defensaBase;
+    private final int velocidadBase;
     private int nivel;
     private int experienciaQueOtorga;
     private Habilidad[] acciones;
@@ -18,7 +22,11 @@ public abstract class Enemigo extends Combatiente {
     public Enemigo(String nombre, int vidaMaxima, int ataque, int defensa, int velocidad,
                    int nivel, int experienciaQueOtorga) {
         super(nombre, vidaMaxima, defensa, velocidad);
+        this.vidaMaximaBase = vidaMaxima;
         this.ataque = ataque;
+        this.ataqueBase = ataque;
+        this.defensaBase = defensa;
+        this.velocidadBase = velocidad;
         this.nivel = nivel;
         this.experienciaQueOtorga = experienciaQueOtorga;
     }
@@ -40,12 +48,23 @@ public abstract class Enemigo extends Combatiente {
         return ataque;
     }
 
-    // TODO: escalado por piso (documento 1.1): las stats de los enemigos
-    // comunes se multiplican +10% por piso (piso 1 = x1.0, piso 2 = x1.1...).
-    // Pista: calcular el factor y usar los setters protegidos de
-    // Combatiente (setVidaMaxima, setVidaActual, setDefensa, setVelocidad)
-    // y el atributo ataque. Ojo con los jefes: decidir si se escalan.
+    // Piso 1 conserva las estadísticas base; cada piso posterior suma un 10%.
     public void escalarSegunPiso(int piso) {
+        if (piso < 1) {
+            throw new IllegalArgumentException("El piso debe ser mayor o igual a 1.");
+        }
+
+        double multiplicador = 1.0 + (piso - 1) * 0.10;
+        int vidaMaxima = escalarStat(vidaMaximaBase, multiplicador);
+        setVidaMaxima(vidaMaxima);
+        setVidaActual(vidaMaxima);
+        ataque = escalarStat(ataqueBase, multiplicador);
+        setDefensa(escalarStat(defensaBase, multiplicador));
+        setVelocidad(escalarStat(velocidadBase, multiplicador));
+    }
+
+    private int escalarStat(int valorBase, double multiplicador) {
+        return Math.max(1, (int) Math.round(valorBase * multiplicador));
     }
 
     public int getNivel() {

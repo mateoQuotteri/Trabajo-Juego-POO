@@ -89,7 +89,14 @@ public abstract class Personaje extends Combatiente {
 
     // Documento: si no usó habilidad en su turno, recupera +10 de maná.
     public void recuperarMana() {
-        manaActual = manaActual + 10;
+        recuperarMana(10);
+    }
+
+    public void recuperarMana(int cantidad) {
+        if (cantidad <= 0) {
+            return;
+        }
+        manaActual = manaActual + cantidad;
         if (manaActual > manaMaximo) {
             manaActual = manaMaximo;
         }
@@ -124,8 +131,7 @@ public abstract class Personaje extends Combatiente {
         }
         return ataqueFisico;
     }
-
-
+    
 
     public Habilidad getHabilidadBasica() {
         return habilidadBasica;
