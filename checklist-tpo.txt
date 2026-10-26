@@ -56,8 +56,9 @@ PARA HACER (buscar "TODO" en el código: cada uno tiene una pista)
 [x] Veneno: Combatiente.aplicarVeneno() y procesarlo al terminar cada
     turno, tanto para personajes como para enemigos.
 [x] Aturdimiento: el combatiente aturdido pierde su siguiente turno.
-[ ] Experiencia y nivel: Personaje.ganarExperiencia() y repartirla al
-    ganar (ControladorDeBatalla.terminarBatalla()).
+[x] Experiencia y nivel: experiencia requerida = nivel actual x 100,
+    nivel máximo 20, +3% compuesto a las estadísticas al subir y reparto
+    al ganar entre los personajes vivos.
 [x] Ítems e inventario: clases Item, Consumible e Inventario; 6 espacios,
     4 consumibles iniciales, uso desde inventario y durante la batalla
     (consume el turno). La obtención como recompensa queda pendiente.

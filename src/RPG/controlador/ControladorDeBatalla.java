@@ -26,6 +26,7 @@ public class ControladorDeBatalla {
     private Party party;
     private Batalla batalla;
     private int pisoActual;
+    private String resumenExperiencia = "";
 
     // ---------- Partida ----------
 
@@ -51,6 +52,7 @@ public class ControladorDeBatalla {
 
     // Arma la batalla del piso actual. Devuelve el primer texto del log.
     public String empezarBatalla() {
+        resumenExperiencia = "";
         Enemigo enemigo = crearEnemigo(pisoActual);
         batalla = new Batalla(party, enemigo, pisoActual);
         String log = "Piso " + pisoActual + ": aparece " + enemigo.getNombre() + "\n";
@@ -233,12 +235,29 @@ public class ControladorDeBatalla {
 
     private String terminarBatalla() {
         if (!batalla.ganoLaParty()) {
+            resumenExperiencia = "";
             return "Toda la party cayó. GAME OVER\n";
         }
-        // TODO: repartir experiencia a los personajes VIVOS
-        // (Personaje.ganarExperiencia) con batalla.getEnemigo().getExperienciaQueOtorga().
+        int experienciaGanada = batalla.getEnemigo().getExperienciaQueOtorga();
+        String log = batalla.getEnemigo().getNombre() + " derrotado. ¡Victoria!\n";
+        resumenExperiencia = "";
+        Personaje[] miembrosVivos = party.getMiembrosVivos();
+        for (int i = 0; i < miembrosVivos.length; i++) {
+            Personaje personaje = miembrosVivos[i];
+            int nivelAnterior = personaje.getNivel();
+            personaje.ganarExperiencia(experienciaGanada);
+            String lineaExperiencia = personaje.getNombre() + " obtiene "
+                    + experienciaGanada + " puntos de experiencia.";
+            log = log + lineaExperiencia + "\n";
+            resumenExperiencia = resumenExperiencia + lineaExperiencia + "\n";
+            if (personaje.getNivel() > nivelAnterior) {
+                String lineaNivel = personaje.getNombre() + " sube al nivel " + personaje.getNivel() + ".";
+                log = log + lineaNivel + "\n";
+                resumenExperiencia = resumenExperiencia + lineaNivel + "\n";
+            }
+        }
         // TODO: recompensas de oro / ítems con lista ponderada (los jefes, siempre).
-        return batalla.getEnemigo().getNombre() + " derrotado. ¡Victoria!\n";
+        return log;
     }
 
     // ---------- Consultas para las pantallas ----------
@@ -253,6 +272,10 @@ public class ControladorDeBatalla {
 
     public int getPisoActual() {
         return pisoActual;
+    }
+
+    public String getResumenExperiencia() {
+        return resumenExperiencia;
     }
 
     public Personaje getPersonajeEnTurno() {
