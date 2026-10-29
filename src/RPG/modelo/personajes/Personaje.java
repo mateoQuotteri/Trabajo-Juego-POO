@@ -142,7 +142,14 @@ public abstract class Personaje extends Combatiente {
         if (valor == 0) {
             return 0;
         }
-        return Math.max(1, (int) Math.round(valor * 1.03));
+
+        // Antes retornabamos esto:
+        // return Math.max(1, (int) Math.round(valor * 1.03));
+        // Ahora:
+        // Con Math.ceil conseguimos que TODAS las estadisticas suban. Con Math.max solo algunas. Ya que ceil redondea SIEMPRE para
+        // arriba.
+
+        return (int) Math.ceil(valor * 1.03);
     }
 
     // ---------- Getters ----------

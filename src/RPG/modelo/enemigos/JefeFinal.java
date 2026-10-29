@@ -10,7 +10,7 @@ import RPG.modelo.habilidades.HabilidadEnvenenar;
 public class JefeFinal extends Enemigo {
 
     public JefeFinal() {
-        super("Guardián Ancestral", 120, 45, 30, 35, 10, 500);
+        super("Guardián Ancestral", 300, 48, 25, 35, 10, 500);
 
         Habilidad ataque = new HabilidadAtaque("Ataque", 0, 1.0, false);
         Habilidad aturdir = new HabilidadAturdir();

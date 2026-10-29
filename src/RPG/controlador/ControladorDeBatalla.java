@@ -11,6 +11,8 @@ import RPG.modelo.enemigos.Slime;
 import RPG.modelo.habilidades.Habilidad;
 import RPG.modelo.items.Consumible;
 import RPG.modelo.items.Item;
+import RPG.modelo.items.PocionMana;
+import RPG.modelo.items.PocionVida;
 import RPG.modelo.personajes.Personaje;
 import RPG.modelo.personajes.Arquero;
 import RPG.modelo.personajes.Curador;
@@ -37,10 +39,10 @@ public class ControladorDeBatalla {
         party.agregarMiembro(new Mago("Pedro"));
         party.agregarMiembro(new Arquero("Cristian"));
         party.agregarMiembro(new Curador("Evelyn"));
-        agregarItemInicial(new Consumible("Poción", "Recupera hasta 25 puntos de vida.", 25, 0));
-        agregarItemInicial(new Consumible("Poción", "Recupera hasta 25 puntos de vida.", 25, 0));
-        agregarItemInicial(new Consumible("Éter", "Recupera hasta 20 puntos de maná.", 0, 20));
-        agregarItemInicial(new Consumible("Éter", "Recupera hasta 20 puntos de maná.", 0, 20));
+        agregarItemInicial(new PocionVida());
+        agregarItemInicial(new PocionVida());
+        agregarItemInicial(new PocionMana());
+
         pisoActual = 1;
     }
 

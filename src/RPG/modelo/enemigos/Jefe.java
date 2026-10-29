@@ -9,7 +9,7 @@ import RPG.modelo.habilidades.HabilidadEnvenenar;
 public class Jefe extends Enemigo {
 
     public Jefe() {
-        super("Rey Slime", 70, 30, 20, 25, 5, 250);
+        super("Rey Slime", 240, 60, 27, 28, 5, 250);
 
         Habilidad ataque = new HabilidadAtaque("Ataque", 0, 1.0, false);
         Habilidad aturdir = new HabilidadAturdir();

@@ -60,8 +60,7 @@ public abstract class Combatiente {
             return "";
         }
 
-        int danioVeneno = Math.max(1, (int) (vidaMaxima * 0.05));
-        recibirDanio(danioVeneno);
+        int danioVeneno = Math.max(1, (int) Math.round(vidaMaxima * 0.05));        perderVida(danioVeneno);
         turnosVenenoRestantes--;
         return nombre + " sufre " + danioVeneno + " de daño por veneno.\n";
     }

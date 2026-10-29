@@ -8,7 +8,7 @@ import RPG.modelo.habilidades.HabilidadAturdir;
 public class Goblin extends Enemigo {
 
     public Goblin() {
-        super("Goblin", 35, 20, 12, 28, 1, 50);
+        super("Goblin", 50, 30, 14, 29, 1, 50);
 
         Habilidad ataque = new HabilidadAtaque("Ataque", 0, 1.0, false);
         Habilidad aturdir = new HabilidadAturdir();
