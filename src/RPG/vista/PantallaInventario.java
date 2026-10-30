@@ -68,6 +68,8 @@ public class PantallaInventario extends JPanel {
     // tabla con los datos actuales de cada personaje.
     public void actualizar() {
         tablaParty.removeAll();
+        tablaParty.setBorder(BorderFactory.createTitledBorder("Party - Oro: "
+                + controlador.getParty().getOro()));
         for (int i = 0; i < COLUMNAS.length; i++) {
             tablaParty.add(new JLabel(COLUMNAS[i]));
         }

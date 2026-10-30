@@ -9,6 +9,7 @@ import java.awt.event.ActionListener;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 // PANTALLA 3: Resumen de batalla.
@@ -21,6 +22,7 @@ public class PantallaResumenBatalla extends JPanel {
     private JLabel etiquetaResultado;
     private JLabel etiquetaDetalle;
     private JLabel etiquetaExperiencia;
+    private JLabel etiquetaRecompensas;
     private JButton botonSiguiente;
     private JButton botonInventario;
 
@@ -34,9 +36,13 @@ public class PantallaResumenBatalla extends JPanel {
         etiquetaResultado.setFont(new Font("SansSerif", Font.BOLD, 28));
         etiquetaDetalle = new JLabel("", JLabel.CENTER);
         etiquetaExperiencia = new JLabel("", JLabel.CENTER);
+        etiquetaRecompensas = new JLabel("", JLabel.CENTER);
         textos.add(etiquetaResultado, BorderLayout.NORTH);
         textos.add(etiquetaDetalle, BorderLayout.CENTER);
-        textos.add(etiquetaExperiencia, BorderLayout.SOUTH);
+        JPanel detalles = new JPanel(new BorderLayout());
+        detalles.add(etiquetaExperiencia, BorderLayout.NORTH);
+        detalles.add(etiquetaRecompensas, BorderLayout.SOUTH);
+        textos.add(detalles, BorderLayout.SOUTH);
         add(textos, BorderLayout.CENTER);
 
         botonSiguiente = new JButton("Siguiente piso");
@@ -93,5 +99,9 @@ public class PantallaResumenBatalla extends JPanel {
         } else {
             etiquetaExperiencia.setText("<html>" + experiencia.replace("\n", "<br>") + "</html>");
         }
+         String recompensas = controlador.getResumenRecompensas();
+        etiquetaRecompensas.setText(recompensas.isEmpty()
+                ? "Oro acumulado: " + controlador.getParty().getOro()
+                : "<html>" + recompensas.replace("\n", "<br>") + "</html>");
     }
 }

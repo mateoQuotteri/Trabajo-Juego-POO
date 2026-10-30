@@ -250,6 +250,9 @@ public class PantallaBatalla extends JPanel {
             if (p == enTurno) {
                 marca = "> ";
             }
+            String escudo = p.getTurnosEscudoRestantes() > 0
+                    ? " [Escudo " + p.getTurnosEscudoRestantes() + "]" : "";
+            nombresParty[i].setText(marca + p.getNombre() + " (" + p.getNombreClase() + ")" + escudo);
             nombresParty[i].setText(marca + p.getNombre() + " (" + p.getNombreClase() + ")");
             barrasVida[i].setMaximum(p.getVidaMaxima());
             barrasVida[i].setValue(p.getVidaActual());

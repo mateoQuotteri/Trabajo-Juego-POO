@@ -11,11 +11,13 @@ public class Party {
     private Personaje[] miembros;
     private int cantidad;
     private Inventario inventario;
+    private int oro;
 
     public Party() {
         miembros = new Personaje[4];
         cantidad = 0;
         this.inventario = new Inventario();
+        this.oro = 0;
     }
 
     // Devuelve false si la party ya tiene 4.
@@ -72,6 +74,17 @@ public class Party {
         return inventario;
     }
 
+    public int getOro() {
+        return oro;
+    }
+
+    public void agregarOro(int cantidad) {
+        if (cantidad < 0) {
+            throw new IllegalArgumentException("La cantidad de oro no puede ser negativa.");
+        }
+        oro = Math.addExact(oro, cantidad);
+    }
+    
     // Game over: todos con vida 0.
     public boolean estaDerrotada() {
         return getMiembrosVivos().length == 0;

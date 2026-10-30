@@ -62,11 +62,11 @@ PARA HACER (buscar "TODO" en el código: cada uno tiene una pista)
 [x] Ítems e inventario: clases Item, Consumible e Inventario; 6 espacios,
     4 consumibles iniciales, uso desde inventario y durante la batalla
     (consume el turno). La obtención como recompensa queda pendiente.
-[ ] Recompensas al ganar (oro / ítems, jefes siempre) y mostrarlas en
+[x] Recompensas al ganar (oro / ítems, jefes siempre) y mostrarlas en
     PantallaResumenBatalla.
 [ ] Guardar / cargar partida (botón "Cargar partida" de PantallaInicio).
     La devolución pide que la persistencia sea una clase aparte.
-[ ] Escudo (mitad de daño 2 turnos): el documento no dice quién lo da.
+[x] Escudo (mitad de daño 2 turnos): el documento no dice quién lo da.
 [ ] Documento de diseño: aclarar que Defender es solo del Guerrero a
     propósito (devolución del profe) y rehacer los diagramas de clases y
     de secuencia con los nombres que hay en el código.

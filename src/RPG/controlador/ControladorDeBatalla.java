@@ -10,6 +10,7 @@ import RPG.modelo.enemigos.JefeFinal;
 import RPG.modelo.enemigos.Slime;
 import RPG.modelo.habilidades.Habilidad;
 import RPG.modelo.items.Consumible;
+import RPG.modelo.items.Escudo;
 import RPG.modelo.items.Item;
 import RPG.modelo.items.PocionMana;
 import RPG.modelo.items.PocionVida;
@@ -29,6 +30,7 @@ public class ControladorDeBatalla {
     private Batalla batalla;
     private int pisoActual;
     private String resumenExperiencia = "";
+    private String resumenRecompensas = "";
 
     // ---------- Partida ----------
 
@@ -55,6 +57,7 @@ public class ControladorDeBatalla {
     // Arma la batalla del piso actual. Devuelve el primer texto del log.
     public String empezarBatalla() {
         resumenExperiencia = "";
+        resumenRecompensas = "";
         Enemigo enemigo = crearEnemigo(pisoActual);
         batalla = new Batalla(party, enemigo, pisoActual);
         String log = "Piso " + pisoActual + ": aparece " + enemigo.getNombre() + "\n";
@@ -162,6 +165,9 @@ public class ControladorDeBatalla {
             return "Ese ítem ya no está en el inventario.\n";
         }
         consumido.usar(objetivo);
+        if (consumido instanceof Escudo && actor == objetivo) {
+            objetivo.omitirProximoDescuentoEscudo();
+        }
         actor.recuperarMana();
         return objetivo.getNombre() + " usó " + consumido.getNombre() + ".\n" + terminarTurno();
     }
@@ -172,6 +178,9 @@ public class ControladorDeBatalla {
         }
         if (!(item instanceof Consumible)) {
             return "Este ítem no se puede usar.\n";
+        }
+        if (item instanceof Escudo && (batalla == null || batalla.estaTerminada())) {
+            return "El escudo solo se puede usar durante una batalla.\n";
         }
         if (!objetivo.estaVivo()) {
             return "No se puede usar un ítem sobre alguien caído.\n";
@@ -202,6 +211,7 @@ public class ControladorDeBatalla {
     private String terminarTurno() {
         Combatiente actual = batalla.getCombatienteActual();
         String log = actual.procesarVenenoAlFinDeTurno();
+        actual.procesarEscudoAlFinDeTurno();
         batalla.pasarAlSiguienteTurno();
         return log + jugarTurnosDelEnemigo();
     }
@@ -216,6 +226,7 @@ public class ControladorDeBatalla {
                 log = log + actual.getNombre() + " pierde su turno por estar aturdido.\n";
                 actual.quitarAturdimiento();
                 log = log + actual.procesarVenenoAlFinDeTurno();
+                actual.procesarEscudoAlFinDeTurno();
                 batalla.pasarAlSiguienteTurno();
                 continue;
             }
@@ -224,6 +235,7 @@ public class ControladorDeBatalla {
                 Personaje objetivo = batalla.getParty().elegirVivoAlAzar();
                 log = log + batalla.getEnemigo().actuar(objetivo) + "\n";
                 log = log + actual.procesarVenenoAlFinDeTurno();
+                actual.procesarEscudoAlFinDeTurno();
                 batalla.pasarAlSiguienteTurno();
                 continue;
             }
@@ -238,11 +250,13 @@ public class ControladorDeBatalla {
     private String terminarBatalla() {
         if (!batalla.ganoLaParty()) {
             resumenExperiencia = "";
+            resumenRecompensas = "";
             return "Toda la party cayó. GAME OVER\n";
         }
         int experienciaGanada = batalla.getEnemigo().getExperienciaQueOtorga();
         String log = batalla.getEnemigo().getNombre() + " derrotado. ¡Victoria!\n";
         resumenExperiencia = "";
+        resumenRecompensas = "";
         Personaje[] miembrosVivos = party.getMiembrosVivos();
         for (int i = 0; i < miembrosVivos.length; i++) {
             Personaje personaje = miembrosVivos[i];
@@ -258,8 +272,44 @@ public class ControladorDeBatalla {
                 resumenExperiencia = resumenExperiencia + lineaNivel + "\n";
             }
         }
-        // TODO: recompensas de oro / ítems con lista ponderada (los jefes, siempre).
+        log = log + entregarRecompensas();
         return log;
+    }
+
+    private String entregarRecompensas() {
+        Enemigo enemigo = batalla.getEnemigo();
+        boolean esJefe = enemigo instanceof Jefe || enemigo instanceof JefeFinal;
+        int oroGanado = esJefe ? 100 + (int) (Math.random() * 101)
+                : 10 + (int) (Math.random() * 21);
+        party.agregarOro(oroGanado);
+        String recompensa = "Oro: +" + oroGanado + " (total: " + party.getOro() + ")";
+        String log = recompensa + "\n";
+
+        if (esJefe || Math.random() < 0.30) {
+            Item item = generarItemRecompensa();
+            if (party.getInventario().agregarItem(item)) {
+                recompensa = recompensa + "\nÍtem: " + item.getNombre();
+                log = log + "Ítem obtenido: " + item.getNombre() + ".\n";
+            } else {
+                recompensa = recompensa + "\nÍtem no obtenido: inventario lleno";
+                log = log + "El inventario está lleno; no se pudo guardar " + item.getNombre() + ".\n";
+            }
+        } else {
+            recompensa = recompensa + "\nSin ítem adicional";
+        }
+        resumenRecompensas = recompensa;
+        return log;
+    }
+
+    private Item generarItemRecompensa() {
+        int seleccion = (int) (Math.random() * 9);
+        if (seleccion < 4) {
+            return new PocionVida();
+        }
+        if (seleccion < 7) {
+            return new PocionMana();
+        }
+        return new Escudo();
     }
 
     // ---------- Consultas para las pantallas ----------
@@ -278,6 +328,10 @@ public class ControladorDeBatalla {
 
     public String getResumenExperiencia() {
         return resumenExperiencia;
+    }
+    
+    public String getResumenRecompensas() {
+        return resumenRecompensas;
     }
 
     public Personaje getPersonajeEnTurno() {

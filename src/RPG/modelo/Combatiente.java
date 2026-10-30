@@ -14,6 +14,8 @@ public abstract class Combatiente {
 
     private boolean aturdido;
     private int turnosVenenoRestantes;
+    private int turnosEscudoRestantes;
+    private boolean escudoRecienAplicado;
 
     public Combatiente(String nombre, int vidaMaxima, int defensa, int velocidad) {
         this.nombre = nombre;
@@ -23,6 +25,8 @@ public abstract class Combatiente {
         this.velocidad = velocidad;
         this.aturdido = false;
         this.turnosVenenoRestantes = 0;
+        this.turnosEscudoRestantes = 0;
+        this.escudoRecienAplicado = false;
     }
 
     // Personaje tiene ataque físico y mágico; Enemigo uno solo.
@@ -30,7 +34,7 @@ public abstract class Combatiente {
     public abstract int getAtaque(boolean esMagico);
 
     public void recibirDanio(int danio) {
-        perderVida(danio);
+        perderVida(reducirPorEscudo(danio));
     }
 
     private void perderVida(int cantidadDeVidaParaPerder){
@@ -60,9 +64,14 @@ public abstract class Combatiente {
             return "";
         }
 
-        int danioVeneno = Math.max(1, (int) Math.round(vidaMaxima * 0.05));        perderVida(danioVeneno);
+        int danioVeneno = reducirPorEscudo(Math.max(1, (int) Math.round(vidaMaxima * 0.05)));
+        perderVida(danioVeneno);
         turnosVenenoRestantes--;
         return nombre + " sufre " + danioVeneno + " de daño por veneno.\n";
+    }
+
+    private int reducirPorEscudo(int danio) {
+        return turnosEscudoRestantes > 0 ? danio / 2 : danio;
     }
 
     public void limpiarAturdimiento() {
@@ -91,9 +100,39 @@ public abstract class Combatiente {
         return turnosVenenoRestantes > 0;
     }
 
+    public void aplicarEscudo(int turnos) {
+        if (turnos <= 0) {
+            throw new IllegalArgumentException("La duración del escudo debe ser positiva.");
+        }
+        turnosEscudoRestantes = turnos;
+        escudoRecienAplicado = false;
+    }
+
+    public void omitirProximoDescuentoEscudo() {
+        if (turnosEscudoRestantes > 0) {
+            escudoRecienAplicado = true;
+        }
+    }
+
+    public int getTurnosEscudoRestantes() {
+        return turnosEscudoRestantes;
+    }
+
+    public void procesarEscudoAlFinDeTurno() {
+        if (turnosEscudoRestantes <= 0) {
+            return;
+        }
+        if (escudoRecienAplicado) {
+            escudoRecienAplicado = false;
+        } else {
+            turnosEscudoRestantes--;
+        }
+    }
     protected void limpiarEstados() {
         aturdido = false;
         turnosVenenoRestantes = 0;
+        turnosEscudoRestantes = 0;
+        escudoRecienAplicado = false;
     }
 
     // ---------- Getters y setters ----------
