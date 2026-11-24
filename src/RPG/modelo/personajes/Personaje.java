@@ -2,6 +2,8 @@ package RPG.modelo.personajes;
 
 import RPG.modelo.Combatiente;
 import RPG.modelo.habilidades.Habilidad;
+import RPG.modelo.items.Arma;
+import RPG.modelo.items.Armadura;
 
 // Clase abstracta para los 4 personajes de la party.
 // Suma a Combatiente: maná, ataque físico/mágico, nivel, experiencia y
@@ -19,6 +21,8 @@ public abstract class Personaje extends Combatiente {
     private Habilidad habilidadPoderosa;
 
     private boolean defendiendo;
+    private Arma armaEquipada;
+    private Armadura armaduraEquipada;
 
     public Personaje(String nombre, int vidaMaxima, int manaMaximo, int ataqueFisico, int ataqueMagico,
                      int defensa, int velocidad, Habilidad habilidadBasica, Habilidad habilidadPoderosa) {
@@ -32,6 +36,8 @@ public abstract class Personaje extends Combatiente {
         this.habilidadBasica = habilidadBasica;
         this.habilidadPoderosa = habilidadPoderosa;
         this.defendiendo = false;
+        this.armaEquipada = null;
+        this.armaduraEquipada = null;
     }
 
     // Cada clase devuelve su nombre ("Guerrero", "Mago"...) para mostrarlo.
@@ -41,7 +47,10 @@ public abstract class Personaje extends Combatiente {
 
     // Ataque básico: gratis y siempre físico.
     public String atacar(Combatiente objetivo) {
-        int danio = ataqueFisico - objetivo.getDefensa();
+        if (objetivo == null || objetivo instanceof Personaje) {
+            throw new IllegalArgumentException("Un personaje solo puede atacar a un enemigo.");
+        }
+        int danio = getAtaqueFisico() - objetivo.getDefensa();
         if (danio < 1) {
             danio = 1;
         }
@@ -50,12 +59,29 @@ public abstract class Personaje extends Combatiente {
     }
 
     public boolean tieneManaPara(Habilidad habilidad) {
+        if (habilidad == null) {
+            throw new IllegalArgumentException("La habilidad es obligatoria.");
+        }
         return manaActual >= habilidad.getCostoMana();
     }
 
-    // Descuenta el maná y ejecuta la habilidad. Antes de llamarlo, el
-    // controlador ya chequeó tieneManaPara().
     public String usarHabilidad(Habilidad habilidad, Combatiente objetivo) {
+        if (habilidad == null || objetivo == null) {
+            throw new IllegalArgumentException("La habilidad y el objetivo son obligatorios.");
+        }
+        if (habilidad != habilidadBasica && habilidad != habilidadPoderosa) {
+            throw new IllegalArgumentException("El personaje no posee esa habilidad.");
+        }
+        if (habilidad.esDeApoyo() && !(objetivo instanceof Personaje)) {
+            throw new IllegalArgumentException("Una habilidad de apoyo solo puede usarse sobre un aliado.");
+        }
+        if (!habilidad.esDeApoyo() && objetivo instanceof Personaje) {
+            throw new IllegalArgumentException("Una habilidad ofensiva no puede usarse sobre un aliado.");
+        }
+        if (!tieneManaPara(habilidad)) {
+            throw new IllegalStateException("No alcanza el maná para usar " + habilidad.getNombre() + ".");
+        }
+
         manaActual = manaActual - habilidad.getCostoMana();
         return habilidad.ejecutar(this, objetivo);
     }
@@ -67,6 +93,9 @@ public abstract class Personaje extends Combatiente {
     }
 
     public String defender() {
+        if (!puedeDefender()) {
+            throw new IllegalStateException("Solo el Guerrero puede defenderse.");
+        }
         defendiendo = true;
         return getNombre() + " se defiende";
     }
@@ -130,7 +159,7 @@ public abstract class Personaje extends Combatiente {
         setVidaMaxima(escalarStat(vidaMaximaAnterior));
         setVidaActual(Math.min(getVidaMaxima(),
                 vidaActualAnterior + getVidaMaxima() - vidaMaximaAnterior));
-        setDefensa(escalarStat(getDefensa()));
+        setDefensa(escalarStat(super.getDefensa()));
         setVelocidad(escalarStat(getVelocidad()));
         manaMaximo = escalarStat(manaMaximo);
         ataqueFisico = escalarStat(ataqueFisico);
@@ -157,11 +186,15 @@ public abstract class Personaje extends Combatiente {
     @Override
     public int getAtaque(boolean esMagico) {
         if (esMagico) {
-            return ataqueMagico;
+            return getAtaqueMagico();
         }
-        return ataqueFisico;
+        return getAtaqueFisico();
     }
-    
+
+    @Override
+    public int getDefensa() {
+        return super.getDefensa() + (armaduraEquipada == null ? 0 : armaduraEquipada.getBonusDefensa());
+    }
 
     public Habilidad getHabilidadBasica() {
         return habilidadBasica;
@@ -180,11 +213,37 @@ public abstract class Personaje extends Combatiente {
     }
 
     public int getAtaqueFisico() {
-        return ataqueFisico;
+        return ataqueFisico + (armaEquipada == null ? 0 : armaEquipada.getBonusAtaqueFisico());
     }
 
     public int getAtaqueMagico() {
         return ataqueMagico;
+    }
+
+    public Arma getArmaEquipada() {
+        return armaEquipada;
+    }
+
+    public Armadura getArmaduraEquipada() {
+        return armaduraEquipada;
+    }
+
+    public Arma equiparArma(Arma arma) {
+        if (arma == null) {
+            throw new IllegalArgumentException("El arma es obligatoria.");
+        }
+        Arma anterior = armaEquipada;
+        armaEquipada = arma;
+        return anterior;
+    }
+
+    public Armadura equiparArmadura(Armadura armadura) {
+        if (armadura == null) {
+            throw new IllegalArgumentException("La armadura es obligatoria.");
+        }
+        Armadura anterior = armaduraEquipada;
+        armaduraEquipada = armadura;
+        return anterior;
     }
 
     public int getNivel() {
@@ -193,5 +252,25 @@ public abstract class Personaje extends Combatiente {
 
     public int getExperiencia() {
         return experiencia;
+    }
+
+    public void restaurarProgreso(int nivel, int experiencia, int vidaActual, int manaActual) {
+        if (nivel < 1 || nivel > 20 || experiencia < 0
+                || (nivel == 20 && experiencia != 0)
+                || (nivel < 20 && experiencia >= nivel * 100)
+                || vidaActual < 0 || manaActual < 0) {
+            throw new IllegalArgumentException("El progreso del personaje guardado no es válido.");
+        }
+
+        while (this.nivel < nivel) {
+            subirNivel();
+        }
+        if (vidaActual > getVidaMaxima() || manaActual > manaMaximo) {
+            throw new IllegalArgumentException("La vida o el maná guardado superan el máximo del personaje.");
+        }
+        this.experiencia = experiencia;
+        setVidaActual(vidaActual);
+        this.manaActual = manaActual;
+        defendiendo = false;
     }
 }

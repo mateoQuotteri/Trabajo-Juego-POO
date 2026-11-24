@@ -66,6 +66,11 @@ public class VentanaPrincipal extends JFrame {
         irABatalla();
     }
 
+    public void cargarPartida() throws java.io.IOException {
+        controlador.cargarPartida();
+        irABatalla();
+    }
+
     public void irABatalla() {
         pantallaBatalla.empezar();
         cartas.show(contenedor, BATALLA);

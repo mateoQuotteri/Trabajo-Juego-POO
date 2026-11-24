@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -47,11 +48,14 @@ public class PantallaInicio extends JPanel {
             }
         });
 
-        // TODO: cargar una partida guardada (documento: archivo JSON con el
-        // piso, la party y el inventario).
         botonCargar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(ventana, "Todavía no está implementado.");
+                try {
+                    ventana.cargarPartida();
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(ventana, ex.getMessage(),
+                            "No se pudo cargar la partida", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 

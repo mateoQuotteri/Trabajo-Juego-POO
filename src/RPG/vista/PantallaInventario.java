@@ -1,12 +1,15 @@
 package RPG.vista;
 
 import RPG.controlador.ControladorDeBatalla;
-import RPG.modelo.items.Item;
-import RPG.modelo.personajes.Personaje;
+import RPG.dto.EstadoInventarioDTO;
+import RPG.dto.ItemDTO;
+import RPG.dto.PersonajeDTO;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -19,7 +22,8 @@ import javax.swing.JPanel;
 public class PantallaInventario extends JPanel {
 
     private static final String[] COLUMNAS = {
-            "Nombre", "Clase", "Nivel", "Vida", "Maná", "Atq. Fís.", "Atq. Mág.", "Defensa", "Velocidad", "Exp."
+            "Nombre", "Clase", "Nivel", "Vida", "Maná", "Atq. Fís.", "Atq. Mág.",
+            "Defensa", "Velocidad", "Exp.", "Arma", "Armadura"
     };
 
     private ControladorDeBatalla controlador;
@@ -67,17 +71,15 @@ public class PantallaInventario extends JPanel {
     // La llama la ventana al entrar a esta pantalla: vuelve a armar la
     // tabla con los datos actuales de cada personaje.
     public void actualizar() {
+        EstadoInventarioDTO estado = controlador.getEstadoInventarioDTO();
         tablaParty.removeAll();
-        tablaParty.setBorder(BorderFactory.createTitledBorder("Party - Oro: "
-                + controlador.getParty().getOro()));
+        tablaParty.setBorder(BorderFactory.createTitledBorder("Party - Oro: " + estado.getOro()));
         for (int i = 0; i < COLUMNAS.length; i++) {
             tablaParty.add(new JLabel(COLUMNAS[i]));
         }
-        Personaje[] miembros = controlador.getParty().getMiembros();
-        for (int i = 0; i < miembros.length; i++) {
-            Personaje p = miembros[i];
+        for (PersonajeDTO p : estado.getPersonajes()) {
             tablaParty.add(new JLabel(p.getNombre()));
-            tablaParty.add(new JLabel(p.getNombreClase()));
+            tablaParty.add(new JLabel(p.getClase()));
             tablaParty.add(new JLabel("" + p.getNivel()));
             tablaParty.add(new JLabel(p.getVidaActual() + "/" + p.getVidaMaxima()));
             tablaParty.add(new JLabel(p.getManaActual() + "/" + p.getManaMaximo()));
@@ -86,21 +88,23 @@ public class PantallaInventario extends JPanel {
             tablaParty.add(new JLabel("" + p.getDefensa()));
             tablaParty.add(new JLabel("" + p.getVelocidad()));
             tablaParty.add(new JLabel("" + p.getExperiencia()));
+            tablaParty.add(new JLabel(p.getArma().isEmpty() ? "-" : p.getArma()));
+            tablaParty.add(new JLabel(p.getArmadura().isEmpty() ? "-" : p.getArmadura()));
         }
-        actualizarInventario();
+        actualizarInventario(estado.getItems());
         tablaParty.revalidate(); // avisa a Swing que cambió el contenido
         tablaParty.repaint();
     }
 
-    private void actualizarInventario() {
+    private void actualizarInventario(List<ItemDTO> items) {
         for (int i = 0; i < espaciosInventario.length; i++) {
-            Item item = controlador.getParty().getInventario().obtenerItem(i);
             JButton espacio = espaciosInventario[i];
-            if (item == null) {
+            if (i >= items.size()) {
                 espacio.setText("(vacío)");
                 espacio.setToolTipText(null);
                 espacio.setEnabled(false);
             } else {
+                ItemDTO item = items.get(i);
                 espacio.setText(item.getNombre());
                 espacio.setToolTipText(item.getDescripcion());
                 espacio.setEnabled(true);
@@ -109,37 +113,44 @@ public class PantallaInventario extends JPanel {
     }
 
     private void mostrarItem(int indice, VentanaPrincipal ventana) {
-        Item item = controlador.getParty().getInventario().obtenerItem(indice);
-        if (item == null) {
-            actualizarInventario();
+        EstadoInventarioDTO estado = controlador.getEstadoInventarioDTO();
+        if (indice < 0 || indice >= estado.getItems().size()) {
+            actualizarInventario(estado.getItems());
             return;
         }
+        ItemDTO item = estado.getItems().get(indice);
 
+        boolean esEquipo = item.esEquipable();
         int opcion = JOptionPane.showConfirmDialog(
                 this,
-                item.getDescripcion() + "\n\n¿Querés usar este ítem?",
+                item.getDescripcion() + (esEquipo ? "\n\n¿Querés equiparlo?" : "\n\n¿Querés usar este ítem?"),
                 item.getNombre(),
                 JOptionPane.YES_NO_OPTION);
         if (opcion != JOptionPane.YES_OPTION) {
             return;
         }
 
-        Personaje[] miembros = controlador.getParty().getMiembrosVivos();
-        if (miembros.length == 0) {
-            JOptionPane.showMessageDialog(this, "No hay personajes vivos.");
+        List<PersonajeDTO> miembros = new ArrayList<PersonajeDTO>();
+        for (PersonajeDTO personaje : estado.getPersonajes()) {
+            if (esEquipo || personaje.estaVivo()) {
+                miembros.add(personaje);
+            }
+        }
+        if (miembros.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay personajes disponibles.");
             return;
         }
 
-        String[] opcionesObjetivo = new String[miembros.length];
-        for (int i = 0; i < miembros.length; i++) {
-            Personaje miembro = miembros[i];
+        String[] opcionesObjetivo = new String[miembros.size()];
+        for (int i = 0; i < miembros.size(); i++) {
+            PersonajeDTO miembro = miembros.get(i);
             opcionesObjetivo[i] = miembro.getNombre() + " (Vida "
                     + miembro.getVidaActual() + "/" + miembro.getVidaMaxima()
                     + ", Maná " + miembro.getManaActual() + "/" + miembro.getManaMaximo() + ")";
         }
         int seleccionado = JOptionPane.showOptionDialog(
                 this,
-                "Elegí el personaje objetivo:",
+                esEquipo ? "Elegí quién va a equipar el ítem:" : "Elegí el personaje objetivo:",
                 "Usar " + item.getNombre(),
                 JOptionPane.DEFAULT_OPTION,
                 JOptionPane.QUESTION_MESSAGE,
@@ -150,7 +161,7 @@ public class PantallaInventario extends JPanel {
             return;
         }
 
-        String resultado = controlador.usarItem(item, miembros[seleccionado]);
+        String resultado = controlador.usarItem(item.getIndice(), miembros.get(seleccionado).getIndice());
         JOptionPane.showMessageDialog(this, resultado);
         actualizar();
     }

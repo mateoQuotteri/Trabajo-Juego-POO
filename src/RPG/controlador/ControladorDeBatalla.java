@@ -1,16 +1,17 @@
 package RPG.controlador;
 
+import RPG.dto.CombatienteDTO;
+import RPG.dto.EstadoBatallaDTO;
+import RPG.dto.EstadoInventarioDTO;
+import RPG.dto.ItemDTO;
+import RPG.dto.PersonajeDTO;
+import RPG.dto.ResumenBatallaDTO;
 import RPG.modelo.Batalla;
-import RPG.modelo.Combatiente;
 import RPG.modelo.Party;
 import RPG.modelo.enemigos.Enemigo;
-import RPG.modelo.enemigos.Goblin;
-import RPG.modelo.enemigos.Jefe;
-import RPG.modelo.enemigos.JefeFinal;
-import RPG.modelo.enemigos.Slime;
 import RPG.modelo.habilidades.Habilidad;
-import RPG.modelo.items.Consumible;
-import RPG.modelo.items.Escudo;
+import RPG.modelo.items.Arma;
+import RPG.modelo.items.Armadura;
 import RPG.modelo.items.Item;
 import RPG.modelo.items.PocionMana;
 import RPG.modelo.items.PocionVida;
@@ -19,6 +20,15 @@ import RPG.modelo.personajes.Arquero;
 import RPG.modelo.personajes.Curador;
 import RPG.modelo.personajes.Guerrero;
 import RPG.modelo.personajes.Mago;
+import RPG.persistencia.PersistenciaPartida;
+import RPG.servicios.FabricaDeEnemigos;
+import RPG.servicios.GestorDeInventario;
+import RPG.servicios.GestorDeProgresion;
+import RPG.servicios.GestorDeRecompensas;
+import RPG.servicios.GestorDeTurnos;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 // CONTROLADOR (la "C" de MVC).
 // Las pantallas le avisan qué tocó el jugador; el controlador le pide al
@@ -31,6 +41,11 @@ public class ControladorDeBatalla {
     private int pisoActual;
     private String resumenExperiencia = "";
     private String resumenRecompensas = "";
+    private final FabricaDeEnemigos fabricaDeEnemigos = new FabricaDeEnemigos();
+    private final GestorDeInventario gestorDeInventario = new GestorDeInventario();
+    private final GestorDeProgresion gestorDeProgresion = new GestorDeProgresion();
+    private final GestorDeRecompensas gestorDeRecompensas = new GestorDeRecompensas();
+    private final GestorDeTurnos gestorDeTurnos = new GestorDeTurnos();
 
     // ---------- Partida ----------
 
@@ -48,6 +63,22 @@ public class ControladorDeBatalla {
         pisoActual = 1;
     }
 
+    public void guardarPartida() throws IOException {
+        if (party == null || batalla == null || !batalla.ganoLaParty() || pisoActual >= 10) {
+            throw new IllegalStateException("Solo se puede guardar una partida entre batallas.");
+        }
+        PersistenciaPartida.guardar(party, pisoActual + 1);
+    }
+
+    public void cargarPartida() throws IOException {
+        PersistenciaPartida.PartidaCargada partida = PersistenciaPartida.cargar();
+        party = partida.getParty();
+        pisoActual = partida.getPisoSiguiente();
+        batalla = null;
+        resumenExperiencia = "";
+        resumenRecompensas = "";
+    }
+
     private void agregarItemInicial(Item item) {
         if (!party.getInventario().agregarItem(item)) {
             throw new IllegalStateException("No se pudo agregar el ítem inicial al inventario.");
@@ -58,33 +89,19 @@ public class ControladorDeBatalla {
     public String empezarBatalla() {
         resumenExperiencia = "";
         resumenRecompensas = "";
-        Enemigo enemigo = crearEnemigo(pisoActual);
+        Enemigo enemigo = fabricaDeEnemigos.crear(pisoActual);
         batalla = new Batalla(party, enemigo, pisoActual);
         String log = "Piso " + pisoActual + ": aparece " + enemigo.getNombre() + "\n";
-        return log + jugarTurnosDelEnemigo();
-    }
-
-    // Documento 1.1: pisos 1-4 y 6-9 enemigos comunes, piso 5 Rey Slime,
-    // piso 10 Guardián Ancestral.
-    private Enemigo crearEnemigo(int piso) {
-        if (piso == 5) {
-            return new Jefe();
+        String turnosAutomaticos = gestorDeTurnos.resolverTurnosAutomaticos(batalla);
+        if (batalla.estaTerminada()) {
+            return log + turnosAutomaticos + terminarBatalla();
         }
-        if (piso == 10) {
-            return new JefeFinal();
-        }
-        Enemigo enemigo = Math.random() < 0.5 ? new Slime() : new Goblin();
-        enemigo.escalarSegunPiso(piso);
-        return enemigo;
+        return log + turnosAutomaticos;
     }
 
     // Botón "Siguiente piso" del resumen.
     public void subirDePiso() {
         pisoActual++;
-    }
-
-    public boolean ganoElJuego() {
-        return batalla.ganoLaParty() && pisoActual == 10;
     }
 
     // ---------- Acciones del jugador ----------
@@ -98,7 +115,7 @@ public class ControladorDeBatalla {
 
     // poderosa = false -> habilidad básica, true -> habilidad poderosa.
     // aliado: solo se usa si la habilidad cura (Curador).
-    public String usarHabilidad(boolean poderosa, Personaje aliado) {
+    public String usarHabilidad(boolean poderosa, int indiceAliado) {
         Personaje actor = batalla.getPersonajeEnTurno();
         Habilidad habilidad;
         if (poderosa) {
@@ -114,6 +131,10 @@ public class ControladorDeBatalla {
 
         String log;
         if (habilidad.esDeApoyo()) {
+            Personaje aliado = obtenerMiembro(indiceAliado);
+            if (aliado == null) {
+                return "Seleccioná un aliado para usar la habilidad\n";
+            }
             if (!aliado.estaVivo()) {
                 return "No se puede curar a alguien caído\n";
             }
@@ -127,124 +148,38 @@ public class ControladorDeBatalla {
 
     public String defender() {
         Personaje actor = batalla.getPersonajeEnTurno();
+        if (actor == null || !actor.puedeDefender()) {
+            return "Solo el Guerrero puede defenderse.\n";
+        }
         String log = actor.defender() + "\n";
         actor.recuperarMana();
         return log + terminarTurno();
     }
     
-    public String usarItem(Item item, Personaje objetivo) {
-        String error = validarUsoItem(item, objetivo);
-        if (error != null) {
-            return error;
-        }
-
-        Item consumido = party.getInventario().removerItem(item);
-        if (consumido == null) {
-            return "Ese ítem ya no está en el inventario.\n";
-        }
-        consumido.usar(objetivo);
-        return objetivo.getNombre() + " usó " + consumido.getNombre() + ".\n";
+    public String usarItem(int indiceItem, int indiceObjetivo) {
+        Item item = obtenerItem(indiceItem);
+        Personaje objetivo = obtenerMiembro(indiceObjetivo);
+        return gestorDeInventario.usarFueraDeBatalla(party, batalla, item, objetivo).getMensaje();
     }
 
-    public String usarItemEnBatalla(Item item, Personaje objetivo) {
-        if (batalla == null || batalla.estaTerminada()) {
-            return "No hay una batalla en curso.\n";
-        }
-        Personaje actor = batalla.getPersonajeEnTurno();
-        if (actor == null) {
-            return "No es el turno de un personaje.\n";
-        }
-
-        String error = validarUsoItem(item, objetivo);
-        if (error != null) {
-            return error;
-        }
-
-        Item consumido = party.getInventario().removerItem(item);
-        if (consumido == null) {
-            return "Ese ítem ya no está en el inventario.\n";
-        }
-        consumido.usar(objetivo);
-        if (consumido instanceof Escudo && actor == objetivo) {
-            objetivo.omitirProximoDescuentoEscudo();
+    public String usarItemEnBatalla(int indiceItem, int indiceObjetivo) {
+        Personaje actor = batalla == null ? null : batalla.getPersonajeEnTurno();
+        Item item = obtenerItem(indiceItem);
+        Personaje objetivo = obtenerMiembro(indiceObjetivo);
+        GestorDeInventario.Resultado resultado = gestorDeInventario.usarEnBatalla(
+                party, batalla, actor, item, objetivo);
+        if (!resultado.fueExitoso()) {
+            return resultado.getMensaje();
         }
         actor.recuperarMana();
-        return objetivo.getNombre() + " usó " + consumido.getNombre() + ".\n" + terminarTurno();
-    }
-
-    private String validarUsoItem(Item item, Personaje objetivo) {
-        if (item == null || objetivo == null) {
-            return "Seleccioná un ítem y un personaje objetivo.\n";
-        }
-        if (!(item instanceof Consumible)) {
-            return "Este ítem no se puede usar.\n";
-        }
-        if (item instanceof Escudo && (batalla == null || batalla.estaTerminada())) {
-            return "El escudo solo se puede usar durante una batalla.\n";
-        }
-        if (!objetivo.estaVivo()) {
-            return "No se puede usar un ítem sobre alguien caído.\n";
-        }
-
-        boolean esMiembro = false;
-        for (Personaje miembro : party.getMiembros()) {
-            if (miembro == objetivo) {
-                esMiembro = true;
-                break;
-            }
-        }
-        if (!esMiembro) {
-            return "El objetivo no pertenece a la party.\n";
-        }
-
-        if (!party.getInventario().getItems().contains(item)) {
-            return "Ese ítem ya no está en el inventario.\n";
-        }
-        if (!((Consumible) item).tieneEfectoEn(objetivo)) {
-            return "Ese ítem no tendría efecto sobre " + objetivo.getNombre() + ".\n";
-        }
-        return null;
+        return resultado.getMensaje() + terminarTurno();
     }
 
     // ---------- Turnos ----------
 
     private String terminarTurno() {
-        Combatiente actual = batalla.getCombatienteActual();
-        String log = actual.procesarVenenoAlFinDeTurno();
-        actual.procesarEscudoAlFinDeTurno();
-        batalla.pasarAlSiguienteTurno();
-        return log + jugarTurnosDelEnemigo();
-    }
-
-    // Si le toca al enemigo, juega solo. Frena cuando le toca a un
-    // personaje (hay que esperar al jugador) o cuando termina la batalla.
-    private String jugarTurnosDelEnemigo() {
-        String log = "";
-        while (!batalla.estaTerminada()) {
-            Combatiente actual = batalla.getCombatienteActual();
-            if (actual.estaAturdido()) {
-                log = log + actual.getNombre() + " pierde su turno por estar aturdido.\n";
-                actual.quitarAturdimiento();
-                log = log + actual.procesarVenenoAlFinDeTurno();
-                actual.procesarEscudoAlFinDeTurno();
-                batalla.pasarAlSiguienteTurno();
-                continue;
-            }
-
-            if (actual == batalla.getEnemigo()) {
-                Personaje objetivo = batalla.getParty().elegirVivoAlAzar();
-                log = log + batalla.getEnemigo().actuar(objetivo) + "\n";
-                log = log + actual.procesarVenenoAlFinDeTurno();
-                actual.procesarEscudoAlFinDeTurno();
-                batalla.pasarAlSiguienteTurno();
-                continue;
-            }
-
-            ((Personaje) actual).iniciarTurno();
-            return log;
-        }
-
-        return log + terminarBatalla();
+        String log = gestorDeTurnos.terminarTurno(batalla);
+        return batalla.estaTerminada() ? log + terminarBatalla() : log;
     }
 
     private String terminarBatalla() {
@@ -254,90 +189,128 @@ public class ControladorDeBatalla {
             return "Toda la party cayó. GAME OVER\n";
         }
         int experienciaGanada = batalla.getEnemigo().getExperienciaQueOtorga();
-        String log = batalla.getEnemigo().getNombre() + " derrotado. ¡Victoria!\n";
-        resumenExperiencia = "";
-        resumenRecompensas = "";
-        Personaje[] miembrosVivos = party.getMiembrosVivos();
-        for (int i = 0; i < miembrosVivos.length; i++) {
-            Personaje personaje = miembrosVivos[i];
-            int nivelAnterior = personaje.getNivel();
-            personaje.ganarExperiencia(experienciaGanada);
-            String lineaExperiencia = personaje.getNombre() + " obtiene "
-                    + experienciaGanada + " puntos de experiencia.";
-            log = log + lineaExperiencia + "\n";
-            resumenExperiencia = resumenExperiencia + lineaExperiencia + "\n";
-            if (personaje.getNivel() > nivelAnterior) {
-                String lineaNivel = personaje.getNombre() + " sube al nivel " + personaje.getNivel() + ".";
-                log = log + lineaNivel + "\n";
-                resumenExperiencia = resumenExperiencia + lineaNivel + "\n";
-            }
-        }
-        log = log + entregarRecompensas();
-        return log;
-    }
-
-    private String entregarRecompensas() {
-        Enemigo enemigo = batalla.getEnemigo();
-        boolean esJefe = enemigo instanceof Jefe || enemigo instanceof JefeFinal;
-        int oroGanado = esJefe ? 100 + (int) (Math.random() * 101)
-                : 10 + (int) (Math.random() * 21);
-        party.agregarOro(oroGanado);
-        String recompensa = "Oro: +" + oroGanado + " (total: " + party.getOro() + ")";
-        String log = recompensa + "\n";
-
-        if (esJefe || Math.random() < 0.30) {
-            Item item = generarItemRecompensa();
-            if (party.getInventario().agregarItem(item)) {
-                recompensa = recompensa + "\nÍtem: " + item.getNombre();
-                log = log + "Ítem obtenido: " + item.getNombre() + ".\n";
-            } else {
-                recompensa = recompensa + "\nÍtem no obtenido: inventario lleno";
-                log = log + "El inventario está lleno; no se pudo guardar " + item.getNombre() + ".\n";
-            }
-        } else {
-            recompensa = recompensa + "\nSin ítem adicional";
-        }
-        resumenRecompensas = recompensa;
-        return log;
-    }
-
-    private Item generarItemRecompensa() {
-        int seleccion = (int) (Math.random() * 9);
-        if (seleccion < 4) {
-            return new PocionVida();
-        }
-        if (seleccion < 7) {
-            return new PocionMana();
-        }
-        return new Escudo();
+        GestorDeProgresion.Resultado progresion =
+                gestorDeProgresion.distribuirExperiencia(party, experienciaGanada);
+        GestorDeRecompensas.Resultado recompensas =
+                gestorDeRecompensas.entregar(party, batalla.getEnemigo());
+        resumenExperiencia = progresion.getResumen();
+        resumenRecompensas = recompensas.getResumen();
+        return batalla.getEnemigo().getNombre() + " derrotado. ¡Victoria!\n"
+                + progresion.getLog() + recompensas.getLog();
     }
 
     // ---------- Consultas para las pantallas ----------
 
-    public Batalla getBatalla() {
-        return batalla;
+    public EstadoBatallaDTO getEstadoBatallaDTO() {
+        if (batalla == null) {
+            throw new IllegalStateException("No hay una batalla para consultar.");
+        }
+        List<PersonajeDTO> personajes = crearPersonajesDTO();
+        int indiceEnTurno = -1;
+        if (!batalla.estaTerminada()) {
+            Personaje actor = batalla.getPersonajeEnTurno();
+            indiceEnTurno = indiceDeMiembro(actor);
+        }
+        Enemigo enemigo = batalla.getEnemigo();
+        CombatienteDTO enemigoDTO = new CombatienteDTO(enemigo.getNombre(), enemigo.getVidaActual(),
+                enemigo.getVidaMaxima(), enemigo.getDefensa(), enemigo.getTurnosEscudoRestantes(),
+                enemigo.estaVivo());
+        return new EstadoBatallaDTO(batalla.getPiso(), batalla.getNumeroRonda(),
+                batalla.getOrdenComoTexto(), enemigoDTO, personajes, crearItemsDTO(),
+                indiceEnTurno, batalla.estaTerminada());
     }
 
-    public Party getParty() {
-        return party;
+    public EstadoInventarioDTO getEstadoInventarioDTO() {
+        asegurarPartidaActiva();
+        return new EstadoInventarioDTO(party.getOro(), crearPersonajesDTO(), crearItemsDTO());
     }
 
-    public int getPisoActual() {
-        return pisoActual;
+    public ResumenBatallaDTO getResumenBatallaDTO() {
+        if (batalla == null) {
+            throw new IllegalStateException("No hay una batalla para resumir.");
+        }
+        boolean gano = batalla.ganoLaParty();
+        boolean puedeContinuar = gano && pisoActual < 10;
+        String resultado;
+        String detalle;
+        if (!gano) {
+            resultado = "GAME OVER";
+            detalle = "La party cayó en el piso " + batalla.getPiso();
+        } else if (pisoActual == 10) {
+            resultado = "¡GANASTE EL JUEGO!";
+            detalle = "Derrotaste al " + batalla.getEnemigo().getNombre();
+        } else {
+            resultado = "Piso " + batalla.getPiso() + " superado";
+            detalle = batalla.getEnemigo().getNombre() + " derrotado en "
+                    + batalla.getNumeroRonda() + " rondas";
+        }
+        return new ResumenBatallaDTO(resultado, detalle, puedeContinuar,
+                resumenExperiencia, resumenRecompensas, party.getOro());
     }
 
-    public String getResumenExperiencia() {
-        return resumenExperiencia;
-    }
-    
-    public String getResumenRecompensas() {
-        return resumenRecompensas;
+    private List<PersonajeDTO> crearPersonajesDTO() {
+        asegurarPartidaActiva();
+        Personaje[] miembros = party.getMiembros();
+        List<PersonajeDTO> resultado = new ArrayList<PersonajeDTO>(miembros.length);
+        for (int i = 0; i < miembros.length; i++) {
+            Personaje personaje = miembros[i];
+            resultado.add(new PersonajeDTO(i, personaje.getNombre(), personaje.getNombreClase(),
+                    personaje.getNivel(), personaje.getVidaActual(), personaje.getVidaMaxima(),
+                    personaje.getManaActual(), personaje.getManaMaximo(), personaje.getAtaqueFisico(),
+                    personaje.getAtaqueMagico(), personaje.getDefensa(), personaje.getVelocidad(),
+                    personaje.getExperiencia(), personaje.getTurnosEscudoRestantes(),
+                    personaje.estaVivo(),
+                    personaje.getArmaEquipada() == null ? "" : personaje.getArmaEquipada().getNombre(),
+                    personaje.getArmaduraEquipada() == null ? "" : personaje.getArmaduraEquipada().getNombre(),
+                    personaje.puedeDefender(), personaje.getHabilidadBasica().getNombre(),
+                    personaje.getHabilidadPoderosa().getNombre(),
+                    personaje.tieneManaPara(personaje.getHabilidadBasica()),
+                    personaje.tieneManaPara(personaje.getHabilidadPoderosa())));
+        }
+        return resultado;
     }
 
-    public Personaje getPersonajeEnTurno() {
-        if (batalla.estaTerminada()) {
+    private List<ItemDTO> crearItemsDTO() {
+        asegurarPartidaActiva();
+        List<ItemDTO> resultado = new ArrayList<ItemDTO>();
+        for (int i = 0; i < party.getInventario().getItems().size(); i++) {
+            Item item = party.getInventario().obtenerItem(i);
+            resultado.add(new ItemDTO(i, item.getNombre(), item.getDescripcion(),
+                    item instanceof Arma || item instanceof Armadura));
+        }
+        return resultado;
+    }
+
+    private Personaje obtenerMiembro(int indice) {
+        if (party == null || indice < 0 || indice >= party.getMiembros().length) {
             return null;
         }
-        return batalla.getPersonajeEnTurno();
+        return party.getMiembros()[indice];
+    }
+
+    private Item obtenerItem(int indice) {
+        if (party == null) {
+            return null;
+        }
+        return party.getInventario().obtenerItem(indice);
+    }
+
+    private int indiceDeMiembro(Personaje personaje) {
+        if (personaje == null || party == null) {
+            return -1;
+        }
+        Personaje[] miembros = party.getMiembros();
+        for (int i = 0; i < miembros.length; i++) {
+            if (miembros[i] == personaje) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void asegurarPartidaActiva() {
+        if (party == null) {
+            throw new IllegalStateException("No hay una partida activa.");
+        }
     }
 }

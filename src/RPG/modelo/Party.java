@@ -22,7 +22,7 @@ public class Party {
 
     // Devuelve false si la party ya tiene 4.
     public boolean agregarMiembro(Personaje personaje) {
-        if (cantidad >= miembros.length) {
+        if (personaje == null || cantidad >= miembros.length) {
             return false;
         }
         miembros[cantidad] = personaje;

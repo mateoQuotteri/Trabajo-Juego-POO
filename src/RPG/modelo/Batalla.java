@@ -16,6 +16,12 @@ public class Batalla {
     private int numeroRonda;
 
     public Batalla(Party party, Enemigo enemigo, int piso) {
+        if (party == null || enemigo == null) {
+            throw new IllegalArgumentException("La party y el enemigo son obligatorios.");
+        }
+        if (!party.tieneMinimoDeMiembros()) {
+            throw new IllegalArgumentException("Una batalla requiere al menos dos personajes.");
+        }
         this.party = party;
         this.enemigo = enemigo;
         this.piso = piso;

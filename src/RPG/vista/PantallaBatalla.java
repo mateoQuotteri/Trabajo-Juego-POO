@@ -1,16 +1,18 @@
 package RPG.vista;
 
 import RPG.controlador.ControladorDeBatalla;
-import RPG.modelo.Batalla;
-import RPG.modelo.enemigos.Enemigo;
-import RPG.modelo.items.Item;
-import RPG.modelo.personajes.Personaje;
+import RPG.dto.CombatienteDTO;
+import RPG.dto.EstadoBatallaDTO;
+import RPG.dto.EstadoInventarioDTO;
+import RPG.dto.ItemDTO;
+import RPG.dto.PersonajeDTO;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -147,19 +149,20 @@ public class PantallaBatalla extends JPanel {
     public void empezar() {
         log.setText("");
         selectorAliado.removeAllItems();
-        Personaje[] miembros = controlador.getParty().getMiembros();
-        for (int i = 0; i < miembros.length; i++) {
-            selectorAliado.addItem(miembros[i].getNombre());
+        EstadoInventarioDTO estado = controlador.getEstadoInventarioDTO();
+        for (PersonajeDTO personaje : estado.getPersonajes()) {
+            selectorAliado.addItem(personaje.getNombre());
         }
         mostrar(controlador.empezarBatalla());
     }
 
-    private Personaje aliadoElegido() {
-        return controlador.getParty().getMiembros()[selectorAliado.getSelectedIndex()];
+    private int aliadoElegido() {
+        return selectorAliado.getSelectedIndex();
     }
 
     private void elegirItemParaUsar() {
-        List<Item> items = controlador.getParty().getInventario().getItems();
+        EstadoBatallaDTO estado = controlador.getEstadoBatallaDTO();
+        List<ItemDTO> items = estado.getItems();
         if (items.isEmpty()) {
             mostrar("No hay ítems disponibles.\n");
             return;
@@ -167,7 +170,7 @@ public class PantallaBatalla extends JPanel {
 
         Object[] opcionesItem = new Object[items.size()];
         for (int i = 0; i < items.size(); i++) {
-            Item item = items.get(i);
+            ItemDTO item = items.get(i);
             opcionesItem[i] = (i + 1) + ". " + item.getNombre() + " — " + item.getDescripcion();
         }
         Object seleccionItem = JOptionPane.showInputDialog(
@@ -181,7 +184,6 @@ public class PantallaBatalla extends JPanel {
         if (seleccionItem == null) {
             return;
         }
-
         int indiceItem = -1;
         for (int i = 0; i < opcionesItem.length; i++) {
             if (opcionesItem[i].equals(seleccionItem)) {
@@ -193,14 +195,19 @@ public class PantallaBatalla extends JPanel {
             return;
         }
 
-        Personaje[] vivos = controlador.getParty().getMiembrosVivos();
-        if (vivos.length == 0) {
+        List<PersonajeDTO> vivos = new ArrayList<PersonajeDTO>();
+        for (PersonajeDTO personaje : estado.getPersonajes()) {
+            if (personaje.estaVivo()) {
+                vivos.add(personaje);
+            }
+        }
+        if (vivos.isEmpty()) {
             mostrar("No hay personajes vivos para recibir el ítem.\n");
             return;
         }
-        Object[] opcionesObjetivo = new Object[vivos.length];
-        for (int i = 0; i < vivos.length; i++) {
-            Personaje personaje = vivos[i];
+        Object[] opcionesObjetivo = new Object[vivos.size()];
+        for (int i = 0; i < vivos.size(); i++) {
+            PersonajeDTO personaje = vivos.get(i);
             opcionesObjetivo[i] = personaje.getNombre() + " (Vida "
                     + personaje.getVidaActual() + "/" + personaje.getVidaMaxima()
                     + ", Maná " + personaje.getManaActual() + "/" + personaje.getManaMaximo() + ")";
@@ -216,13 +223,18 @@ public class PantallaBatalla extends JPanel {
         if (seleccionObjetivo == null) {
             return;
         }
-
+        int indiceObjetivo = -1;
         for (int i = 0; i < opcionesObjetivo.length; i++) {
             if (opcionesObjetivo[i].equals(seleccionObjetivo)) {
-                mostrar(controlador.usarItemEnBatalla(items.get(indiceItem), vivos[i]));
-                return;
+                indiceObjetivo = i;
+                break;
             }
         }
+        if (indiceObjetivo < 0) {
+            return;
+        }
+        mostrar(controlador.usarItemEnBatalla(items.get(indiceItem).getIndice(),
+                vivos.get(indiceObjetivo).getIndice()));
     }
 
     // Agrega el texto al log y vuelve a dibujar todo.
@@ -232,28 +244,33 @@ public class PantallaBatalla extends JPanel {
     }
 
     private void actualizar() {
-        Batalla batalla = controlador.getBatalla();
-        Enemigo enemigo = batalla.getEnemigo();
+        EstadoBatallaDTO estado = controlador.getEstadoBatallaDTO();
+        CombatienteDTO enemigo = estado.getEnemigo();
 
-        etiquetaPiso.setText("Piso " + batalla.getPiso() + " - Ronda " + batalla.getNumeroRonda()
-                + "   (orden: " + batalla.getOrdenComoTexto() + ")");
+        etiquetaPiso.setText("Piso " + estado.getPiso() + " - Ronda " + estado.getNumeroRonda()
+                + "   (orden: " + estado.getOrdenDeTurnos() + ")");
         etiquetaEnemigo.setText(enemigo.getNombre());
         barraEnemigo.setMaximum(enemigo.getVidaMaxima());
         barraEnemigo.setValue(enemigo.getVidaActual());
         barraEnemigo.setString(enemigo.getVidaActual() + " / " + enemigo.getVidaMaxima());
 
-        Personaje enTurno = controlador.getPersonajeEnTurno();
-        Personaje[] miembros = controlador.getParty().getMiembros();
-        for (int i = 0; i < miembros.length; i++) {
-            Personaje p = miembros[i];
+        PersonajeDTO enTurno = null;
+        List<PersonajeDTO> miembros = estado.getPersonajes();
+        for (PersonajeDTO personaje : miembros) {
+            if (personaje.getIndice() == estado.getIndicePersonajeEnTurno()) {
+                enTurno = personaje;
+                break;
+            }
+        }
+        for (int i = 0; i < miembros.size(); i++) {
+            PersonajeDTO p = miembros.get(i);
             String marca = "";
             if (p == enTurno) {
                 marca = "> ";
             }
             String escudo = p.getTurnosEscudoRestantes() > 0
                     ? " [Escudo " + p.getTurnosEscudoRestantes() + "]" : "";
-            nombresParty[i].setText(marca + p.getNombre() + " (" + p.getNombreClase() + ")" + escudo);
-            nombresParty[i].setText(marca + p.getNombre() + " (" + p.getNombreClase() + ")");
+            nombresParty[i].setText(marca + p.getNombre() + " (" + p.getClase() + ")" + escudo);
             barrasVida[i].setMaximum(p.getVidaMaxima());
             barrasVida[i].setValue(p.getVidaActual());
             barrasVida[i].setString("Vida " + p.getVidaActual() + " / " + p.getVidaMaxima());
@@ -262,22 +279,21 @@ public class PantallaBatalla extends JPanel {
             barrasMana[i].setString("Maná " + p.getManaActual() + " / " + p.getManaMaximo());
         }
 
-        boolean terminada = (enTurno == null);
+        boolean terminada = estado.estaTerminada() || enTurno == null;
         botonResumen.setEnabled(terminada);
         botonAtacar.setEnabled(!terminada);
-        botonDefender.setEnabled(!terminada && enTurno.puedeDefender());
-        botonItem.setEnabled(!terminada && !controlador.getParty().getInventario().getItems().isEmpty());
+        botonDefender.setEnabled(!terminada && enTurno != null && enTurno.puedeDefender());
+        botonItem.setEnabled(!terminada && !estado.getItems().isEmpty());
         if (terminada) {
             etiquetaTurno.setText("Batalla terminada");
             botonBasica.setEnabled(false);
             botonPoderosa.setEnabled(false);
         } else {
             etiquetaTurno.setText("Turno de " + enTurno.getNombre());
-            botonBasica.setText(enTurno.getHabilidadBasica().getNombre());
-            botonPoderosa.setText(enTurno.getHabilidadPoderosa().getNombre());
-            // Documento: si no alcanza el maná, la habilidad se muestra bloqueada.
-            botonBasica.setEnabled(enTurno.tieneManaPara(enTurno.getHabilidadBasica()));
-            botonPoderosa.setEnabled(enTurno.tieneManaPara(enTurno.getHabilidadPoderosa()));
+            botonBasica.setText(enTurno.getHabilidadBasica());
+            botonPoderosa.setText(enTurno.getHabilidadPoderosa());
+            botonBasica.setEnabled(enTurno.isHabilidadBasicaDisponible());
+            botonPoderosa.setEnabled(enTurno.isHabilidadPoderosaDisponible());
         }
     }
 }

@@ -27,6 +27,10 @@ src/RPG/
     enemigos/    Enemigo, Slime, Goblin, Jefe, JefeFinal
     habilidades/ Habilidad, HabilidadAtaque, HabilidadCuracion,
                  HabilidadAturdir, HabilidadEnvenenar
+  servicios/    FabricaDeEnemigos, GestorDeInventario, GestorDeTurnos,
+                GestorDeProgresion, GestorDeRecompensas
+  dto/          EstadoBatallaDTO, EstadoInventarioDTO, ResumenBatallaDTO,
+                CombatienteDTO, PersonajeDTO, ItemDTO
   controlador/   ControladorDeBatalla
   vista/         VentanaPrincipal, PantallaInicio, PantallaBatalla,
                  PantallaResumenBatalla, PantallaInventario
@@ -47,6 +51,10 @@ YA FUNCIONA
 [x] Lo que pidió la devolución del profe: Combatiente como tipo común;
     atacar / usarHabilidad / Habilidad.ejecutar reciben Combatiente; los
     enemigos también usan habilidades.
+[x] Responsabilidades separadas del controlador: creación de enemigos,
+    gestión de inventario, turnos e IA, progresión y recompensas.
+[x] Las vistas usan DTOs y envían índices al controlador; no reciben
+    objetos del Modelo.
 [x] Enemigo común elegido al azar entre Slime y Goblin; sus estadísticas
     escalan +10% por piso desde el piso 2. Los jefes no escalan.
 
@@ -60,12 +68,16 @@ PARA HACER (buscar "TODO" en el código: cada uno tiene una pista)
     nivel máximo 20, +3% compuesto a las estadísticas al subir y reparto
     al ganar entre los personajes vivos.
 [x] Ítems e inventario: clases Item, Consumible e Inventario; 6 espacios,
-    4 consumibles iniciales, uso desde inventario y durante la batalla
-    (consume el turno). La obtención como recompensa queda pendiente.
+    consumibles iniciales y uso desde inventario y durante la batalla
+    (consume el turno).
+[x] Equipo: arma (+10 ataque físico) y armadura (+10 defensa), equipables
+    desde el inventario; al reemplazarlos, el equipo anterior vuelve al
+    inventario y el equipo equipado se conserva al guardar la partida.
 [x] Recompensas al ganar (oro / ítems, jefes siempre) y mostrarlas en
     PantallaResumenBatalla.
-[ ] Guardar / cargar partida (botón "Cargar partida" de PantallaInicio).
-    La devolución pide que la persistencia sea una clase aparte.
+[x] Guardar / cargar partida en JSON (persistencia en clase aparte):
+    se guarda desde el resumen tras una victoria y al cargar se retoma
+    en el siguiente piso con la party y el inventario restaurados.
 [x] Escudo (mitad de daño 2 turnos): el documento no dice quién lo da.
 [ ] Documento de diseño: aclarar que Defender es solo del Guerrero a
     propósito (devolución del profe) y rehacer los diagramas de clases y
